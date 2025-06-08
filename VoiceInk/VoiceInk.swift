@@ -166,7 +166,7 @@ class UpdaterViewModel: ObservableObject {
     @Published var canCheckForUpdates = false
     
     init() {
-        updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        updaterController = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil)
         
         // Disable automatic update checking
         updaterController.updater.automaticallyChecksForUpdates = false
