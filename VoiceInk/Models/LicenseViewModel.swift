@@ -22,7 +22,6 @@ class LicenseViewModel: ObservableObject {
     init() {
         // Skip license checks and always activate license on startup
         licenseState = .licensed
-        NotificationCenter.default.post(name: .licenseStatusChanged, object: nil)
     }
     
     func startTrial() {
