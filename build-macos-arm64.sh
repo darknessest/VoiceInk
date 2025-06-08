@@ -197,9 +197,9 @@ echo "✅ Creating XCFramework..."
 xcodebuild -create-xcframework \
     -framework $(pwd)/build-macos/framework/whisper.framework \
     -debug-symbols $(pwd)/build-macos/dSYMs/whisper.dSYM \
-    -output $(pwd)/build-apple/whisper-macos-arm64.xcframework
+    -output $(pwd)/build-apple/whisper.xcframework
 
-echo "🎉 Completed: build-apple/whisper-macos-arm64.xcframework"
+echo "🎉 Completed: build-apple/whisper.xcframework"
 
 # Return to project root
 echo "🔙 Returning to project root"

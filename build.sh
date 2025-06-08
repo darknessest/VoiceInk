@@ -14,15 +14,11 @@ fi
 echo "🔨 Building whisper.cpp XCFramework via local script..."
 bash build-macos-arm64.sh
 # Verify that the XCFramework was built
-if [ ! -d "whisper.cpp/build-apple/whisper-macos-arm64.xcframework" ]; then
-    echo "❌ Error: whisper-macos-arm64.xcframework was not built successfully"
+if [ ! -d "whisper.cpp/build-apple/whisper.xcframework" ]; then
+    echo "❌ Error: whisper.xcframework was not built successfully"
     exit 1
 fi
 echo "✅ whisper.cpp XCFramework built successfully for macOS arm64"
-# Copy the XCFramework to the expected name for Xcode project
-rm -rf whisper.cpp/build-apple/whisper.xcframework
-cp -R whisper.cpp/build-apple/whisper-macos-arm64.xcframework whisper.cpp/build-apple/whisper.xcframework
-echo "✅ Renamed whisper-macos-arm64.xcframework to whisper.xcframework"
 
 # Build VoiceInk
 echo "🔨 Building VoiceInk..."
