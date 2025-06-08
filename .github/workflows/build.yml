@@ -64,6 +64,12 @@ jobs:
         cmake --build build-macos --config Release
         ls -la build-macos/src/Release/
         
+        # Create the XCFramework that the Xcode project expects
+        mkdir -p build-apple
+        xcodebuild -create-xcframework \
+          -library build-macos/src/Release/libwhisper.dylib \
+          -output build-apple/whisper.xcframework
+        
     - name: Verify whisper.cpp build
       run: |
         if [ ! -f "whisper.cpp/build-macos/src/Release/libwhisper.dylib" ]; then
@@ -71,6 +77,13 @@ jobs:
           exit 1
         fi
         echo "✅ libwhisper.dylib found"
+        
+        # Verify XCFramework was created
+        if [ ! -d "whisper.cpp/build-apple/whisper.xcframework" ]; then
+          echo "❌ Error: whisper.xcframework was not created successfully"
+          exit 1
+        fi
+        echo "✅ whisper.xcframework found"
         
         # Verify library architecture
         echo "🔍 Verifying library architecture..."
@@ -94,9 +107,12 @@ jobs:
           -configuration Debug \
           -derivedDataPath build \
           -destination 'platform=macOS,arch=arm64' \
+          -allowProvisioningUpdates \
           ARCHS='arm64' \
           VALID_ARCHS='arm64' \
           ONLY_ACTIVE_ARCH=NO \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
           build
           
     - name: Verify build artifacts
@@ -131,6 +147,7 @@ jobs:
         path: |
           build/Build/Products/Debug/VoiceInk.app
           whisper.cpp/build-macos/src/Release/libwhisper.dylib
+          whisper.cpp/build-apple/whisper.xcframework
         retention-days: 30
         
     - name: Test with build script
