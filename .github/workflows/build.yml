@@ -15,9 +15,6 @@ on:
   release:
     types: [published]
 
-env:
-  DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
-
 jobs:
   build:
     runs-on: macos-latest
