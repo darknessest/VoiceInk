@@ -96,6 +96,27 @@ If you encounter any issues or have questions, please:
 - [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) - User-customizable keyboard shortcuts
 - [LaunchAtLogin](https://github.com/sindresorhus/LaunchAtLogin) - Launch at login functionality
 
+# Important Note About Unsigned Releases
+
+The DMG file provided in the [GitHub Releases](https://github.com/Beingpax/VoiceInk/releases) is an **unsigned app**. This means:
+
+- **Most features will work out of the box**
+- **Accessibility permissions (required for autopaste of transcript) will NOT work** unless the app is properly signed
+
+If you want to use the autopaste feature (which requires Accessibility permissions), you must sign the app locally.
+
+### How to Sign the App Locally
+
+A script is provided to help you sign the app:
+
+```shell
+./sign-app-local.sh /path/to/VoiceInk.app
+```
+
+- Replace `/path/to/VoiceInk.app` with the actual path to your `.app` file (for example, after mounting the DMG and copying the app to your Applications folder).
+- The script will automatically look for your available Apple Developer identity and use it to sign the app.
+
+After signing, you will be able to grant Accessibility permissions and use all features, including autopaste.
 
 ---
 
