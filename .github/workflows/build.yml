@@ -48,85 +48,148 @@ jobs:
         cd whisper.cpp
         git log --oneline -1
         
-    - name: Build whisper.cpp XCFramework for macOS
+    - name: Build whisper.cpp for macOS arm64
       run: |
         cd whisper.cpp
         
-        # Use the proper XCFramework build script
-        echo "Building whisper.cpp XCFramework for macOS..."
-        chmod +x build-xcframework.sh
+        # First build the static libraries
+        cmake -B build-macos -G Xcode \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
+          -DCMAKE_OSX_ARCHITECTURES="arm64" \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DWHISPER_BUILD_EXAMPLES=OFF \
+          -DWHISPER_BUILD_TESTS=OFF \
+          -DWHISPER_BUILD_SERVER=OFF \
+          -DGGML_METAL=ON \
+          -DGGML_METAL_EMBED_LIBRARY=ON \
+          -DWHISPER_COREML=ON \
+          -S .
+        cmake --build build-macos --config Release
         
-        # Set environment variables for the build
-        export MACOS_MIN_OS_VERSION=14.0
-        export ARCHS_MACOS="arm64"
+        # Create framework structure
+        mkdir -p build-macos/framework/whisper.framework/Versions/A/Headers
+        mkdir -p build-macos/framework/whisper.framework/Versions/A/Resources
         
-        # Build only for macOS since that's what we need for GitHub Actions
-        echo "Starting XCFramework build..."
-        if ./build-xcframework.sh -p macos; then
-          echo "✅ XCFramework build completed successfully"
-        else
-          echo "❌ XCFramework build failed, trying fallback cmake approach..."
-          
-          # Fallback to cmake approach if XCFramework build fails
-          cmake -B build-macos -G Xcode \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
-            -DCMAKE_OSX_ARCHITECTURES="arm64" \
-            -DBUILD_SHARED_LIBS=ON \
-            -DWHISPER_BUILD_EXAMPLES=OFF \
-            -DWHISPER_BUILD_TESTS=OFF \
-            -DWHISPER_BUILD_SERVER=OFF \
-            -DGGML_METAL=ON \
-            -DGGML_METAL_EMBED_LIBRARY=ON \
-            -DWHISPER_COREML=ON \
-            -S .
-          cmake --build build-macos --config Release
-          
-          # Create minimal XCFramework structure
-          mkdir -p build-apple/whisper.xcframework/macos-arm64/whisper.framework/Versions/A
-          mkdir -p build-apple/whisper.xcframework/macos-arm64/whisper.framework/Modules
-          
-          # Copy the library
-          cp build-macos/src/Release/libwhisper.dylib build-apple/whisper.xcframework/macos-arm64/whisper.framework/Versions/A/whisper
-          
-          # Copy headers
-          cp -r include build-apple/whisper.xcframework/macos-arm64/whisper.framework/Versions/A/Headers
-          
-          # Create a basic module map
-          cat > build-apple/whisper.xcframework/macos-arm64/whisper.framework/Modules/module.modulemap << 'EOF'
-          framework module whisper {
-              header "whisper.h"
-              header "ggml.h"
-              header "ggml-alloc.h"
-              header "ggml-backend.h"
-              export *
-          }
-          EOF
-          
-          # Create symlinks for macOS framework structure
-          cd build-apple/whisper.xcframework/macos-arm64/whisper.framework
-          ln -sf Versions/A/whisper whisper
-          ln -sf Versions/A/Headers Headers
-          ln -sf Versions/A/Modules Modules
-          cd ../../../..
-        fi
+        # Create symlinks
+        ln -s A build-macos/framework/whisper.framework/Versions/Current
+        ln -s Versions/Current/Headers build-macos/framework/whisper.framework/Headers
+        ln -s Versions/Current/Resources build-macos/framework/whisper.framework/Resources
+        ln -s Versions/Current/whisper build-macos/framework/whisper.framework/whisper
         
-        ls -la build-apple/
+        # Copy headers
+        cp include/whisper.h build-macos/framework/whisper.framework/Versions/A/Headers/
+        cp ggml/include/ggml.h build-macos/framework/whisper.framework/Versions/A/Headers/
+        cp ggml/include/ggml-alloc.h build-macos/framework/whisper.framework/Versions/A/Headers/
+        cp ggml/include/ggml-backend.h build-macos/framework/whisper.framework/Versions/A/Headers/
+        cp ggml/include/ggml-metal.h build-macos/framework/whisper.framework/Versions/A/Headers/
+        cp ggml/include/ggml-cpu.h build-macos/framework/whisper.framework/Versions/A/Headers/
+        cp ggml/include/ggml-blas.h build-macos/framework/whisper.framework/Versions/A/Headers/
+        cp ggml/include/gguf.h build-macos/framework/whisper.framework/Versions/A/Headers/
         
-        # Verify the XCFramework structure
+        # Create module map
+        cat > build-macos/framework/whisper.framework/Versions/A/Headers/module.modulemap << EOF
+        framework module whisper {
+            header "whisper.h"
+            header "ggml.h"
+            header "ggml-alloc.h"
+            header "ggml-backend.h"
+            header "ggml-metal.h"
+            header "ggml-cpu.h"
+            header "ggml-blas.h"
+            header "gguf.h"
+
+            link "c++"
+            link framework "Accelerate"
+            link framework "Metal"
+            link framework "Foundation"
+            link framework "CoreML"
+
+            export *
+        }
+        EOF
+        
+        # Combine static libraries into a dynamic framework
+        libtool -static -o build-macos/temp_combined.a \
+          build-macos/src/Release/libwhisper.a \
+          build-macos/ggml/src/Release/libggml.a \
+          build-macos/ggml/src/Release/libggml-base.a \
+          build-macos/ggml/src/Release/libggml-cpu.a \
+          build-macos/ggml/src/ggml-metal/Release/libggml-metal.a \
+          build-macos/ggml/src/ggml-blas/Release/libggml-blas.a \
+          build-macos/src/Release/libwhisper.coreml.a \
+          2>/dev/null || true
+        
+        # Create dynamic library from static
+        clang++ -dynamiclib \
+          -target arm64-apple-macos14.0 \
+          -Wl,-all_load build-macos/temp_combined.a \
+          -framework Foundation \
+          -framework Metal \
+          -framework Accelerate \
+          -framework CoreML \
+          -install_name @rpath/whisper.framework/Versions/Current/whisper \
+          -o build-macos/framework/whisper.framework/Versions/A/whisper
+        
+        # Clean up temp file
+        rm -f build-macos/temp_combined.a
+        
+        # Create Info.plist
+        cat > build-macos/framework/whisper.framework/Versions/A/Resources/Info.plist << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleDevelopmentRegion</key>
+            <string>en</string>
+            <key>CFBundleExecutable</key>
+            <string>whisper</string>
+            <key>CFBundleIdentifier</key>
+            <string>org.ggml.whisper</string>
+            <key>CFBundleInfoDictionaryVersion</key>
+            <string>6.0</string>
+            <key>CFBundleName</key>
+            <string>whisper</string>
+            <key>CFBundlePackageType</key>
+            <string>FMWK</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.0</string>
+            <key>CFBundleVersion</key>
+            <string>1</string>
+            <key>MinimumOSVersion</key>
+            <string>14.0</string>
+            <key>CFBundleSupportedPlatforms</key>
+            <array>
+                <string>MacOSX</string>
+            </array>
+            <key>DTPlatformName</key>
+            <string>macosx</string>
+            <key>DTSDKName</key>
+            <string>macosx14.0</string>
+        </dict>
+        </plist>
+        EOF
+        
+        # Create the final XCFramework directory structure
+        mkdir -p build-apple
+        
+        # Create XCFramework from the framework
+        xcodebuild -create-xcframework \
+          -framework build-macos/framework/whisper.framework \
+          -output build-apple/whisper.xcframework
+        
+        # Debug: Show what was created
         echo "XCFramework contents:"
         find build-apple/whisper.xcframework -type f | head -20
         
-        # Check if module.modulemap exists
-        if [ -f "build-apple/whisper.xcframework/macos-arm64/Modules/module.modulemap" ]; then
-          echo "✅ Module map found"
-          cat build-apple/whisper.xcframework/macos-arm64/Modules/module.modulemap
-        else
-          echo "❌ Module map not found"
-          find build-apple/whisper.xcframework -name "*.modulemap" -o -name "Modules" -type d
-        fi
-        
     - name: Verify whisper.cpp build
       run: |
+        # Verify framework was created
+        if [ ! -f "whisper.cpp/build-macos/framework/whisper.framework/whisper" ]; then
+          echo "❌ Error: whisper framework was not built successfully"
+          exit 1
+        fi
+        echo "✅ whisper framework found"
+        
         # Verify XCFramework was created
         if [ ! -d "whisper.cpp/build-apple/whisper.xcframework" ]; then
           echo "❌ Error: whisper.xcframework was not created successfully"
@@ -141,39 +204,25 @@ jobs:
           echo "✅ Found macos-arm64 directory"
           ls -la whisper.cpp/build-apple/whisper.xcframework/macos-arm64/
           
-          # Look for the whisper framework binary
-          if [ -f "whisper.cpp/build-apple/whisper.xcframework/macos-arm64/whisper.framework/Versions/A/whisper" ]; then
-            echo "✅ Found whisper framework binary"
-            WHISPER_LIB="whisper.cpp/build-apple/whisper.xcframework/macos-arm64/whisper.framework/Versions/A/whisper"
-          elif [ -f "whisper.cpp/build-apple/whisper.xcframework/macos-arm64/whisper.framework/whisper" ]; then
-            echo "✅ Found whisper framework binary (flat structure)"
-            WHISPER_LIB="whisper.cpp/build-apple/whisper.xcframework/macos-arm64/whisper.framework/whisper"
+          # Check if the framework exists in XCFramework
+          echo "🔍 Checking for framework in XCFramework..."
+          if [ -d "whisper.cpp/build-apple/whisper.xcframework/macos-arm64/whisper.framework" ]; then
+            echo "✅ Found whisper.framework in XCFramework"
+            
+            # Check for module map
+            if [ -f "whisper.cpp/build-apple/whisper.xcframework/macos-arm64/whisper.framework/Headers/module.modulemap" ]; then
+              echo "✅ Found module.modulemap"
+              echo "📋 Module map contents:"
+              cat whisper.cpp/build-apple/whisper.xcframework/macos-arm64/whisper.framework/Headers/module.modulemap
+            else
+              echo "❌ module.modulemap not found"
+              exit 1
+            fi
           else
-            echo "❌ whisper framework binary not found"
-            echo "All files in macos-arm64:"
-            find whisper.cpp/build-apple/whisper.xcframework/macos-arm64 -type f
+            echo "❌ whisper.framework not found in XCFramework"
+            echo "Contents of macos-arm64:"
+            ls -la whisper.cpp/build-apple/whisper.xcframework/macos-arm64/
             exit 1
-          fi
-          
-          # Verify library architecture
-          echo "🔍 Verifying library architecture..."
-          file "$WHISPER_LIB"
-          lipo -archs "$WHISPER_LIB"
-          
-          if lipo -archs "$WHISPER_LIB" | grep -q "arm64"; then
-            echo "✅ Library contains Apple Silicon (arm64) architecture"
-          else
-            echo "❌ Library missing Apple Silicon (arm64) architecture"
-            exit 1
-          fi
-          
-          # Check for module.modulemap
-          if [ -f "whisper.cpp/build-apple/whisper.xcframework/macos-arm64/whisper.framework/Modules/module.modulemap" ] || \
-             [ -f "whisper.cpp/build-apple/whisper.xcframework/macos-arm64/Modules/module.modulemap" ]; then
-            echo "✅ Module map found"
-          else
-            echo "❌ Module map not found - Swift import may fail"
-            find whisper.cpp/build-apple/whisper.xcframework -name "*.modulemap" || echo "No modulemap files found"
           fi
         else
           echo "❌ macos-arm64 directory not found"
@@ -182,22 +231,24 @@ jobs:
           exit 1
         fi
         
+        # Verify library architecture
+        echo "🔍 Verifying framework binary architecture..."
+        FRAMEWORK_BINARY="whisper.cpp/build-macos/framework/whisper.framework/whisper"
+        file "$FRAMEWORK_BINARY"
+        lipo -archs "$FRAMEWORK_BINARY"
+        
+        if lipo -archs "$FRAMEWORK_BINARY" | grep -q "arm64"; then
+          echo "✅ Framework binary contains Apple Silicon (arm64) architecture"
+        else
+          echo "❌ Framework binary missing Apple Silicon (arm64) architecture"
+          exit 1
+        fi
+        
     - name: List Xcode schemes
       run: xcodebuild -project VoiceInk.xcodeproj -list
         
-    - name: Clean build artifacts
-      run: |
-        rm -rf build/
-        xcodebuild -project VoiceInk.xcodeproj \
-          -scheme VoiceInk \
-          -configuration Debug \
-          clean
-          
     - name: Build VoiceInk
       run: |
-        echo "Starting VoiceInk build..."
-        
-        # Add the XCFramework path to framework search paths
         xcodebuild -project VoiceInk.xcodeproj \
           -scheme VoiceInk \
           -configuration Debug \
@@ -209,31 +260,7 @@ jobs:
           ONLY_ACTIVE_ARCH=NO \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
-          OTHER_SWIFT_FLAGS="-v" \
-          FRAMEWORK_SEARCH_PATHS="$(pwd)/whisper.cpp/build-apple/whisper.xcframework/macos-arm64 \$(inherited)" \
-          build 2>&1 | tee build_output.log
-          
-    - name: Show detailed build errors on failure
-      if: failure()
-      run: |
-        echo "=== Build Output Tail ==="
-        tail -n 50 build_output.log || echo "No build output file found"
-        
-        echo "=== Checking Swift Module Search Paths ==="
-        xcodebuild -project VoiceInk.xcodeproj -scheme VoiceInk -showBuildSettings | grep -E "(SWIFT_INCLUDE_PATHS|LIBRARY_SEARCH_PATHS|FRAMEWORK_SEARCH_PATHS|HEADER_SEARCH_PATHS)" || true
-        
-        echo "=== Checking XCFramework Structure ==="
-        find whisper.cpp/build-apple/whisper.xcframework -type f | head -10 || echo "XCFramework not found"
-        
-        echo "=== Checking if whisper module can be imported ==="
-        echo "import whisper" | xcrun swift -F whisper.cpp/build-apple/whisper.xcframework/macos-arm64 - 2>&1 || echo "Cannot import whisper module"
-        
-        echo "=== Checking Swift compiler search paths ==="
-        echo "Available frameworks:"
-        find whisper.cpp/build-apple/whisper.xcframework -name "*.framework" -type d
-        
-        echo "=== Checking for Swift interface files ==="
-        find whisper.cpp/build-apple/whisper.xcframework -name "*.swiftinterface" || echo "No Swift interface files found"
+          build
           
     - name: Verify build artifacts
       run: |
@@ -266,6 +293,7 @@ jobs:
         name: VoiceInk-build-${{ github.sha }}
         path: |
           build/Build/Products/Debug/VoiceInk.app
+          whisper.cpp/build-macos/framework/whisper.framework
           whisper.cpp/build-apple/whisper.xcframework
         retention-days: 30
         

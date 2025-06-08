@@ -14,11 +14,11 @@ fi
 echo "🔨 Building whisper.cpp for macOS arm64..."
 cd whisper.cpp
 
-# Build using cmake directly for macOS arm64 only
+# First build the static libraries
 cmake -B build-macos -G Xcode \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
     -DCMAKE_OSX_ARCHITECTURES="arm64" \
-    -DBUILD_SHARED_LIBS=ON \
+    -DBUILD_SHARED_LIBS=OFF \
     -DWHISPER_BUILD_EXAMPLES=OFF \
     -DWHISPER_BUILD_TESTS=OFF \
     -DWHISPER_BUILD_SERVER=OFF \
@@ -29,16 +29,23 @@ cmake -B build-macos -G Xcode \
 
 cmake --build build-macos --config Release
 
+# Create framework structure for local development  
+echo "🏗️ Creating whisper framework..."
+mkdir -p build-apple
+
+# Use the official build script to create proper XCFramework
+./build-xcframework.sh --enable-coreml
+
 # Go back to the root directory
 cd ..
 
-# Verify that the library was built
-if [ ! -f "whisper.cpp/build-macos/src/Release/libwhisper.dylib" ]; then
-    echo "❌ Error: libwhisper.dylib was not built successfully"
+# Verify that the XCFramework was built
+if [ ! -d "whisper.cpp/build-apple/whisper.xcframework" ]; then
+    echo "❌ Error: whisper.xcframework was not built successfully"
     exit 1
 fi
 
-echo "✅ whisper.cpp built successfully for macOS arm64"
+echo "✅ whisper.cpp XCFramework built successfully for macOS arm64"
 
 # Build VoiceInk
 echo "🔨 Building VoiceInk..."
@@ -75,4 +82,4 @@ fi
 
 echo "📦 Build artifacts:"
 echo "   - App: build/Build/Products/Debug/VoiceInk.app"
-echo "   - Library: whisper.cpp/build-macos/src/Release/libwhisper.dylib" 
+echo "   - XCFramework: whisper.cpp/build-apple/whisper.xcframework" 
