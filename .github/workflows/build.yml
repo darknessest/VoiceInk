@@ -45,7 +45,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        brew install cmake ccache libomp openblas
+        brew install cmake ccache libomp openblas --formula
         
     - name: Show tool versions
       run: |
