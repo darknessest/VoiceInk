@@ -68,7 +68,12 @@ jobs:
         mkdir -p build-apple
         xcodebuild -create-xcframework \
           -library build-macos/src/Release/libwhisper.dylib \
+          -headers include \
           -output build-apple/whisper.xcframework
+        
+        # Debug: Show what was created
+        echo "XCFramework contents:"
+        find build-apple/whisper.xcframework -type f | head -20
         
     - name: Verify whisper.cpp build
       run: |
@@ -84,6 +89,18 @@ jobs:
           exit 1
         fi
         echo "✅ whisper.xcframework found"
+        
+        # Check XCFramework structure
+        echo "🔍 Checking XCFramework structure..."
+        ls -la whisper.cpp/build-apple/whisper.xcframework/
+        if [ -d "whisper.cpp/build-apple/whisper.xcframework/macos-arm64" ]; then
+          echo "✅ Found macos-arm64 directory"
+          ls -la whisper.cpp/build-apple/whisper.xcframework/macos-arm64/
+        else
+          echo "❌ macos-arm64 directory not found"
+          echo "Available directories:"
+          find whisper.cpp/build-apple/whisper.xcframework -type d
+        fi
         
         # Verify library architecture
         echo "🔍 Verifying library architecture..."
