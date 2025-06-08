@@ -60,12 +60,10 @@ jobs:
         
     - name: Build whisper.cpp for macOS arm64
       run: |
-        cd whisper.cpp
-        bash ../build-macos-arm64.sh
+        bash build-macos-arm64.sh
         # Ensure the XCFramework is in the expected location
-        rm -rf build-apple/whisper.xcframework
-        cp -R build-apple/whisper-macos-arm64.xcframework build-apple/whisper.xcframework
-        cd ..
+        rm -rf whisper.cpp/build-apple/whisper.xcframework
+        cp -R whisper.cpp/build-apple/whisper-macos-arm64.xcframework whisper.cpp/build-apple/whisper.xcframework
 
     - name: List Xcode schemes
       run: xcodebuild -project VoiceInk.xcodeproj -list
