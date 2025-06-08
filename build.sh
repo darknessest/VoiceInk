@@ -10,42 +10,19 @@ if [ ! -f "whisper.cpp/README.md" ]; then
     git submodule update --init --recursive
 fi
 
-# Build whisper.cpp for macOS arm64
-echo "🔨 Building whisper.cpp for macOS arm64..."
-cd whisper.cpp
-
-# First build the static libraries
-cmake -B build-macos -G Xcode \
-    -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
-    -DCMAKE_OSX_ARCHITECTURES="arm64" \
-    -DBUILD_SHARED_LIBS=OFF \
-    -DWHISPER_BUILD_EXAMPLES=OFF \
-    -DWHISPER_BUILD_TESTS=OFF \
-    -DWHISPER_BUILD_SERVER=OFF \
-    -DGGML_METAL=ON \
-    -DGGML_METAL_EMBED_LIBRARY=ON \
-    -DWHISPER_COREML=ON \
-    -S .
-
-cmake --build build-macos --config Release
-
-# Create framework structure for local development  
-echo "🏗️ Creating whisper framework..."
-mkdir -p build-apple
-
-# Use the official build script to create proper XCFramework
-./build-xcframework.sh --enable-coreml
-
-# Go back to the root directory
-cd ..
-
+# Use our macOS arm64-only build script for whisper.cpp
+echo "🔨 Building whisper.cpp XCFramework via local script..."
+bash build-macos-arm64.sh
 # Verify that the XCFramework was built
-if [ ! -d "whisper.cpp/build-apple/whisper.xcframework" ]; then
-    echo "❌ Error: whisper.xcframework was not built successfully"
+if [ ! -d "whisper.cpp/build-apple/whisper-macos-arm64.xcframework" ]; then
+    echo "❌ Error: whisper-macos-arm64.xcframework was not built successfully"
     exit 1
 fi
-
 echo "✅ whisper.cpp XCFramework built successfully for macOS arm64"
+# Copy the XCFramework to the expected name for Xcode project
+rm -rf whisper.cpp/build-apple/whisper.xcframework
+cp -R whisper.cpp/build-apple/whisper-macos-arm64.xcframework whisper.cpp/build-apple/whisper.xcframework
+echo "✅ Renamed whisper-macos-arm64.xcframework to whisper.xcframework"
 
 # Build VoiceInk
 echo "🔨 Building VoiceInk..."
@@ -54,6 +31,16 @@ echo "🔨 Building VoiceInk..."
 ARCH=$(uname -m)
 echo "📱 Building on architecture: $ARCH"
 
+# echo "🧪 Running tests..."
+# xcodebuild -project VoiceInk.xcodeproj \
+#     -scheme VoiceInk \
+#     -configuration Debug \
+#     -derivedDataPath build \
+#     -destination 'platform=macOS,arch=arm64' \
+#     CODE_SIGNING_ALLOWED=NO \
+#     CODE_SIGNING_REQUIRED=NO \
+#     CODE_SIGN_IDENTITY="" \
+#     test
 # Use xcodebuild to build the project with Apple Silicon support
 xcodebuild -project VoiceInk.xcodeproj \
     -scheme VoiceInk \
@@ -63,6 +50,9 @@ xcodebuild -project VoiceInk.xcodeproj \
     ARCHS='arm64' \
     VALID_ARCHS='arm64' \
     ONLY_ACTIVE_ARCH=NO \
+    CODE_SIGNING_ALLOWED=NO \
+    CODE_SIGNING_REQUIRED=NO \
+    CODE_SIGN_IDENTITY="" \
     build
 
 echo "✅ VoiceInk built successfully!"
