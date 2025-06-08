@@ -31,25 +31,12 @@ echo "🔨 Building VoiceInk..."
 ARCH=$(uname -m)
 echo "📱 Building on architecture: $ARCH"
 
-# echo "🧪 Running tests..."
-# xcodebuild -project VoiceInk.xcodeproj \
-#     -scheme VoiceInk \
-#     -configuration Debug \
-#     -derivedDataPath build \
-#     -destination 'platform=macOS,arch=arm64' \
-#     CODE_SIGNING_ALLOWED=NO \
-#     CODE_SIGNING_REQUIRED=NO \
-#     CODE_SIGN_IDENTITY="" \
-#     test
 # Use xcodebuild to build the project with Apple Silicon support
 xcodebuild -project VoiceInk.xcodeproj \
     -scheme VoiceInk \
-    -configuration Debug \
+    -configuration Release \
     -derivedDataPath build \
     -destination 'platform=macOS,arch=arm64' \
-    ARCHS='arm64' \
-    VALID_ARCHS='arm64' \
-    ONLY_ACTIVE_ARCH=NO \
     CODE_SIGNING_ALLOWED=NO \
     CODE_SIGNING_REQUIRED=NO \
     CODE_SIGN_IDENTITY="" \
@@ -58,12 +45,12 @@ xcodebuild -project VoiceInk.xcodeproj \
 echo "✅ VoiceInk built successfully!"
 
 # Verify the binary architecture
-if [ -f "build/Build/Products/Debug/VoiceInk.app/Contents/MacOS/VoiceInk" ]; then
+if [ -f "build/Build/Products/Release/VoiceInk.app/Contents/MacOS/VoiceInk" ]; then
     echo "🔍 Verifying binary architecture..."
-    file build/Build/Products/Debug/VoiceInk.app/Contents/MacOS/VoiceInk
-    lipo -archs build/Build/Products/Debug/VoiceInk.app/Contents/MacOS/VoiceInk
+    file build/Build/Products/Release/VoiceInk.app/Contents/MacOS/VoiceInk
+    lipo -archs build/Build/Products/Release/VoiceInk.app/Contents/MacOS/VoiceInk
     
-    if lipo -archs build/Build/Products/Debug/VoiceInk.app/Contents/MacOS/VoiceInk | grep -q "arm64"; then
+    if lipo -archs build/Build/Products/Release/VoiceInk.app/Contents/MacOS/VoiceInk | grep -q "arm64"; then
         echo "✅ Binary contains Apple Silicon (arm64) architecture"
     else
         echo "⚠️  Binary does not contain Apple Silicon (arm64) architecture"
@@ -71,5 +58,5 @@ if [ -f "build/Build/Products/Debug/VoiceInk.app/Contents/MacOS/VoiceInk" ]; the
 fi
 
 echo "📦 Build artifacts:"
-echo "   - App: build/Build/Products/Debug/VoiceInk.app"
+echo "   - App: build/Build/Products/Release/VoiceInk.app"
 echo "   - XCFramework: whisper.cpp/build-apple/whisper.xcframework" 

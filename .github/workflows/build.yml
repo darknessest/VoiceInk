@@ -31,6 +31,16 @@ jobs:
       with:
         xcode-version: '16.2'
         
+    - name: Cache Homebrew
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/Library/Caches/Homebrew
+          /usr/local/Homebrew/Library/Taps
+        key: brew-${{ runner.os }}-${{ hashFiles('.github/workflows/build.yml') }}
+        restore-keys: |
+          brew-${{ runner.os }}-
+
     - name: Install dependencies
       run: |
         brew install cmake ccache libomp openblas
@@ -49,62 +59,36 @@ jobs:
         git log --oneline -1
         
     - name: Build whisper.cpp for macOS arm64
-      run: 
-
+      run: |
+        cd whisper.cpp
+        bash ../build-macos-arm64.sh
+        # Ensure the XCFramework is in the expected location
+        rm -rf build-apple/whisper.xcframework
+        cp -R build-apple/whisper-macos-arm64.xcframework build-apple/whisper.xcframework
+        cd ..
 
     - name: List Xcode schemes
       run: xcodebuild -project VoiceInk.xcodeproj -list
 
-    - name: Test whisper module import
-      run: |
-        echo "🧪 Testing whisper module import..."
-        
-        # Create a simple test file to check if the module can be imported
-        cat > test_import.swift << 'EOF'
-        import Foundation
-        #if canImport(whisper)
-        import whisper
-        print("✅ Successfully imported whisper module")
-        #else
-        print("❌ Cannot import whisper module")
-        #endif
-        EOF
-        
-        # Compile using the actual whisper.framework inside the XCFramework
-        swiftc -sdk $(xcrun --show-sdk-path --sdk macosx) \
-          -target arm64-apple-macos14.0 \
-          -F whisper.cpp/build-apple/whisper.xcframework/macos-arm64 \
-          -framework whisper \
-          -Xlinker -rpath -Xlinker whisper.cpp/build-apple/whisper.xcframework/macos-arm64 \
-          -o test_import \
-          test_import.swift || echo "❌ Test compilation failed"
-        
-        # If compilation succeeded, run the test
-        if [ -f test_import ]; then
-          echo "🏃 Running import test..."
-          ./test_import || echo "❌ Test execution failed"
-          rm test_import
-        fi
-        
-        rm test_import.swift
-        
+    - name: Cache Xcode DerivedData
+      uses: actions/cache@v4
+      with:
+        path: build
+        key: deriveddata-${{ runner.os }}-${{ github.sha }}
+        restore-keys: |
+          deriveddata-${{ runner.os }}-
+
     - name: Build VoiceInk
       run: |
-        echo "🔨 Building VoiceInk with verbose output..."
         xcodebuild -project VoiceInk.xcodeproj \
           -scheme VoiceInk \
-          -configuration Debug \
+          -configuration Release \
           -derivedDataPath build \
           -destination 'platform=macOS,arch=arm64' \
-          -allowProvisioningUpdates \
-          ARCHS='arm64' \
-          VALID_ARCHS='arm64' \
-          ONLY_ACTIVE_ARCH=NO \
-          CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
-          -verbose \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGN_IDENTITY="" \
           build
-          
 
     - name: Archive build artifacts
       uses: actions/upload-artifact@v4
@@ -112,7 +96,7 @@ jobs:
       with:
         name: VoiceInk-build-${{ github.sha }}
         path: |
-          build/Build/Products/Debug/VoiceInk.app
+          build/Build/Products/Release/VoiceInk.app
           whisper.cpp/build-macos/framework/whisper.framework
           whisper.cpp/build-apple/whisper.xcframework
         retention-days: 30
