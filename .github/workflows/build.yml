@@ -384,6 +384,7 @@ jobs:
           -target arm64-apple-macos14.0 \
           -F whisper.cpp/build-apple/whisper.xcframework/macos-arm64 \
           -framework whisper \
+          -Xlinker -rpath -Xlinker whisper.cpp/build-apple/whisper.xcframework/macos-arm64 \
           -o test_import \
           test_import.swift || echo "❌ Test compilation failed"
         
