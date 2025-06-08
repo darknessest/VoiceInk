@@ -38,6 +38,7 @@ jobs:
     - name: Show tool versions
       run: |
         xcodebuild -version
+        swift --version
         cmake --version
         echo "System architecture: $(uname -m)"
         sysctl -n machdep.cpu.brand_string
@@ -51,7 +52,7 @@ jobs:
       run: |
         cd whisper.cpp
         cmake -B build-macos -G Xcode \
-          -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
           -DCMAKE_OSX_ARCHITECTURES="arm64" \
           -DBUILD_SHARED_LIBS=ON \
           -DWHISPER_BUILD_EXAMPLES=OFF \
