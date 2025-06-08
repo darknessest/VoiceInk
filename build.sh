@@ -34,14 +34,36 @@ echo "✅ whisper.xcframework built successfully"
 # Build VoiceInk
 echo "🔨 Building VoiceInk..."
 
-# Use xcodebuild to build the project
+# Check if we're on Apple Silicon
+ARCH=$(uname -m)
+echo "📱 Building on architecture: $ARCH"
+
+# Use xcodebuild to build the project with Apple Silicon support
 xcodebuild -project VoiceInk.xcodeproj \
     -scheme VoiceInk \
     -configuration Debug \
     -derivedDataPath build \
+    -destination 'platform=macOS,arch=arm64' \
+    ARCHS='arm64' \
+    VALID_ARCHS='arm64' \
+    ONLY_ACTIVE_ARCH=NO \
     build
 
 echo "✅ VoiceInk built successfully!"
+
+# Verify the binary architecture
+if [ -f "build/Build/Products/Debug/VoiceInk.app/Contents/MacOS/VoiceInk" ]; then
+    echo "🔍 Verifying binary architecture..."
+    file build/Build/Products/Debug/VoiceInk.app/Contents/MacOS/VoiceInk
+    lipo -archs build/Build/Products/Debug/VoiceInk.app/Contents/MacOS/VoiceInk
+    
+    if lipo -archs build/Build/Products/Debug/VoiceInk.app/Contents/MacOS/VoiceInk | grep -q "arm64"; then
+        echo "✅ Binary contains Apple Silicon (arm64) architecture"
+    else
+        echo "⚠️  Binary does not contain Apple Silicon (arm64) architecture"
+    fi
+fi
+
 echo "📦 Build artifacts:"
 echo "   - App: build/Build/Products/Debug/VoiceInk.app"
 echo "   - XCFramework: whisper.cpp/build-apple/whisper.xcframework" 

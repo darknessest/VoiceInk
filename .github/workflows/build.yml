@@ -39,6 +39,8 @@ jobs:
       run: |
         xcodebuild -version
         cmake --version
+        echo "System architecture: $(uname -m)"
+        sysctl -n machdep.cpu.brand_string
       
     - name: Show whisper.cpp version
       run: |
@@ -61,6 +63,26 @@ jobs:
         echo "✅ whisper.xcframework found"
         ls -la whisper.cpp/build-apple/whisper.xcframework/
         
+        # Verify macOS framework contains Apple Silicon
+        echo "🔍 Verifying macOS framework architecture..."
+        MACOS_FRAMEWORK="whisper.cpp/build-apple/whisper.xcframework/macos-arm64_x86_64/whisper.framework/Versions/A/whisper"
+        if [ -f "$MACOS_FRAMEWORK" ]; then
+          echo "Found macOS framework binary"
+          file "$MACOS_FRAMEWORK"
+          lipo -archs "$MACOS_FRAMEWORK"
+          
+          if lipo -archs "$MACOS_FRAMEWORK" | grep -q "arm64"; then
+            echo "✅ macOS framework contains Apple Silicon (arm64) architecture"
+          else
+            echo "❌ macOS framework missing Apple Silicon (arm64) architecture"
+            exit 1
+          fi
+        else
+          echo "❌ macOS framework binary not found at expected location"
+          find whisper.cpp/build-apple/whisper.xcframework -name "whisper" -type f
+          exit 1
+        fi
+        
     - name: List Xcode schemes
       run: xcodebuild -project VoiceInk.xcodeproj -list
         
@@ -70,7 +92,10 @@ jobs:
           -scheme VoiceInk \
           -configuration Debug \
           -derivedDataPath build \
-          -destination 'platform=macOS' \
+          -destination 'platform=macOS,arch=arm64' \
+          ARCHS='arm64' \
+          VALID_ARCHS='arm64' \
+          ONLY_ACTIVE_ARCH=NO \
           build
           
     - name: Verify build artifacts
@@ -79,6 +104,19 @@ jobs:
         if [ -d "build/Build/Products/Debug/VoiceInk.app" ]; then
           echo "✅ VoiceInk.app built successfully"
           du -sh build/Build/Products/Debug/VoiceInk.app
+          
+          # Verify the binary is built for Apple Silicon
+          echo "🔍 Verifying architecture..."
+          file build/Build/Products/Debug/VoiceInk.app/Contents/MacOS/VoiceInk
+          lipo -archs build/Build/Products/Debug/VoiceInk.app/Contents/MacOS/VoiceInk
+          
+          # Check if the binary contains arm64 architecture
+          if lipo -archs build/Build/Products/Debug/VoiceInk.app/Contents/MacOS/VoiceInk | grep -q "arm64"; then
+            echo "✅ Binary contains Apple Silicon (arm64) architecture"
+          else
+            echo "❌ Binary does not contain Apple Silicon (arm64) architecture"
+            exit 1
+          fi
         else
           echo "❌ VoiceInk.app not found"
           exit 1
