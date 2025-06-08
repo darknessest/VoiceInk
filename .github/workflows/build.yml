@@ -33,7 +33,7 @@ jobs:
         
     - name: Install dependencies
       run: |
-        brew install cmake
+        brew install cmake ccache
         
     - name: Show tool versions
       run: |
