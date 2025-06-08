@@ -108,18 +108,42 @@ jobs:
         }
         EOF
         
+        # Check what static libraries exist
+        echo "🔍 Checking available static libraries..."
+        find build-macos -name "*.a" -type f | sort
+        
+        # Gather existing libraries
+        LIBS=()
+        for lib in \
+          "build-macos/src/Release/libwhisper.a" \
+          "build-macos/ggml/src/Release/libggml.a" \
+          "build-macos/ggml/src/Release/libggml-base.a" \
+          "build-macos/ggml/src/Release/libggml-cpu.a" \
+          "build-macos/ggml/src/ggml-metal/Release/libggml-metal.a" \
+          "build-macos/ggml/src/ggml-blas/Release/libggml-blas.a" \
+          "build-macos/src/Release/libwhisper.coreml.a"
+        do
+          if [ -f "$lib" ]; then
+            echo "✅ Found: $lib"
+            LIBS+=("$lib")
+          else
+            echo "❌ Missing: $lib"
+          fi
+        done
+        
         # Combine static libraries into a dynamic framework
-        libtool -static -o build-macos/temp_combined.a \
-          build-macos/src/Release/libwhisper.a \
-          build-macos/ggml/src/Release/libggml.a \
-          build-macos/ggml/src/Release/libggml-base.a \
-          build-macos/ggml/src/Release/libggml-cpu.a \
-          build-macos/ggml/src/ggml-metal/Release/libggml-metal.a \
-          build-macos/ggml/src/ggml-blas/Release/libggml-blas.a \
-          build-macos/src/Release/libwhisper.coreml.a \
-          2>/dev/null || true
+        echo "🔗 Combining ${#LIBS[@]} static libraries..."
+        libtool -static -o build-macos/temp_combined.a "${LIBS[@]}" 2>/dev/null
+        
+        # Verify combined library was created
+        if [ ! -f "build-macos/temp_combined.a" ]; then
+          echo "❌ Failed to create combined static library"
+          exit 1
+        fi
+        echo "✅ Combined static library created: $(du -h build-macos/temp_combined.a)"
         
         # Create dynamic library from static
+        echo "🔗 Creating dynamic framework library..."
         clang++ -dynamiclib \
           -target arm64-apple-macos14.0 \
           -Wl,-all_load build-macos/temp_combined.a \
@@ -129,6 +153,13 @@ jobs:
           -framework CoreML \
           -install_name @rpath/whisper.framework/Versions/Current/whisper \
           -o build-macos/framework/whisper.framework/Versions/A/whisper
+        
+        # Verify dynamic library was created
+        if [ ! -f "build-macos/framework/whisper.framework/Versions/A/whisper" ]; then
+          echo "❌ Failed to create dynamic framework library"
+          exit 1
+        fi
+        echo "✅ Dynamic framework library created: $(du -h build-macos/framework/whisper.framework/Versions/A/whisper)"
         
         # Clean up temp file
         rm -f build-macos/temp_combined.a
@@ -173,13 +204,56 @@ jobs:
         mkdir -p build-apple
         
         # Create XCFramework from the framework
+        echo "🔗 Creating XCFramework..."
         xcodebuild -create-xcframework \
           -framework build-macos/framework/whisper.framework \
           -output build-apple/whisper.xcframework
         
+        # Verify XCFramework creation
+        if [ ! -d "build-apple/whisper.xcframework" ]; then
+          echo "❌ Failed to create XCFramework"
+          exit 1
+        fi
+        echo "✅ XCFramework created successfully"
+        
         # Debug: Show what was created
         echo "XCFramework contents:"
         find build-apple/whisper.xcframework -type f | head -20
+        
+        # List the complete XCFramework structure
+        echo "Complete XCFramework structure:"
+        tree build-apple/whisper.xcframework || find build-apple/whisper.xcframework -print | sed -e 's;[^/]*/;|____;g;s;____|; |;g'
+        
+        # Verify critical components exist
+        echo "🔍 Verifying XCFramework components..."
+        XCFW_FRAMEWORK_PATH="build-apple/whisper.xcframework/macos-arm64/whisper.framework"
+        
+        # Check framework binary
+        if [ -f "$XCFW_FRAMEWORK_PATH/whisper" ]; then
+          echo "✅ Framework binary present in XCFramework"
+          file "$XCFW_FRAMEWORK_PATH/whisper"
+        else
+          echo "❌ Framework binary missing in XCFramework"
+          exit 1
+        fi
+        
+        # Check module map
+        if [ -f "$XCFW_FRAMEWORK_PATH/Headers/module.modulemap" ]; then
+          echo "✅ Module map present in XCFramework"
+        else
+          echo "❌ Module map missing in XCFramework"
+          exit 1
+        fi
+        
+        # Check essential headers
+        for header in whisper.h ggml.h; do
+          if [ -f "$XCFW_FRAMEWORK_PATH/Headers/$header" ]; then
+            echo "✅ Header $header present"
+          else
+            echo "❌ Header $header missing"
+            exit 1
+          fi
+        done
         
     - name: Verify whisper.cpp build
       run: |
@@ -246,9 +320,86 @@ jobs:
         
     - name: List Xcode schemes
       run: xcodebuild -project VoiceInk.xcodeproj -list
+      
+    - name: Check XCFramework availability for Xcode
+      run: |
+        echo "🔍 Checking if XCFramework is accessible for Xcode build..."
+        if [ -d "whisper.cpp/build-apple/whisper.xcframework" ]; then
+          echo "✅ XCFramework directory exists"
+          
+          # Check if the XCFramework is valid
+          echo "🔍 Validating XCFramework..."
+          xcodebuild -checkFirstLaunchStatus || true
+          
+          # Try to get framework info
+          if xcodebuild -showsdks >/dev/null 2>&1; then
+            echo "✅ Xcode tools are working"
+          else
+            echo "❌ Xcode tools issue detected"
+          fi
+          
+          # Check the specific framework binary
+          FRAMEWORK_PATH="whisper.cpp/build-apple/whisper.xcframework/macos-arm64/whisper.framework"
+          if [ -f "$FRAMEWORK_PATH/whisper" ]; then
+            echo "✅ Framework binary exists at: $FRAMEWORK_PATH/whisper"
+            file "$FRAMEWORK_PATH/whisper"
+            otool -l "$FRAMEWORK_PATH/whisper" | grep -A 3 LC_ID_DYLIB || echo "No LC_ID_DYLIB found"
+          else
+            echo "❌ Framework binary not found at: $FRAMEWORK_PATH/whisper"
+            ls -la "$FRAMEWORK_PATH" || echo "Framework directory doesn't exist"
+          fi
+          
+          # Check headers
+          HEADERS_PATH="$FRAMEWORK_PATH/Headers"
+          if [ -d "$HEADERS_PATH" ]; then
+            echo "✅ Headers directory exists"
+            echo "Headers:"
+            ls -la "$HEADERS_PATH"
+          else
+            echo "❌ Headers directory not found"
+          fi
+          
+        else
+          echo "❌ XCFramework not found!"
+          exit 1
+        fi
+        
+    - name: Test whisper module import
+      run: |
+        echo "🧪 Testing whisper module import..."
+        
+        # Create a simple test file to check if the module can be imported
+        cat > test_import.swift << 'EOF'
+        import Foundation
+        #if canImport(whisper)
+        import whisper
+        print("✅ Successfully imported whisper module")
+        #else
+        print("❌ Cannot import whisper module")
+        #endif
+        EOF
+        
+        # Try to compile the test
+        echo "🔨 Attempting to compile test import..."
+        swiftc -sdk $(xcrun --show-sdk-path --sdk macosx) \
+          -target arm64-apple-macos14.0 \
+          -F whisper.cpp/build-apple \
+          -framework whisper \
+          -o test_import \
+          test_import.swift || echo "❌ Test compilation failed"
+        
+        # If compilation succeeded, run the test
+        if [ -f test_import ]; then
+          echo "🏃 Running import test..."
+          ./test_import || echo "❌ Test execution failed"
+          rm test_import
+        fi
+        
+        rm test_import.swift
         
     - name: Build VoiceInk
       run: |
+        echo "🔨 Building VoiceInk with verbose output..."
         xcodebuild -project VoiceInk.xcodeproj \
           -scheme VoiceInk \
           -configuration Debug \
@@ -260,6 +411,7 @@ jobs:
           ONLY_ACTIVE_ARCH=NO \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
+          -verbose \
           build
           
     - name: Verify build artifacts
