@@ -379,11 +379,10 @@ jobs:
         #endif
         EOF
         
-        # Try to compile the test
-        echo "🔨 Attempting to compile test import..."
+        # Compile using the actual whisper.framework inside the XCFramework
         swiftc -sdk $(xcrun --show-sdk-path --sdk macosx) \
           -target arm64-apple-macos14.0 \
-          -F whisper.cpp/build-apple \
+          -F whisper.cpp/build-apple/whisper.xcframework/macos-arm64 \
           -framework whisper \
           -o test_import \
           test_import.swift || echo "❌ Test compilation failed"
