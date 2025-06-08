@@ -9,7 +9,7 @@ class LicenseViewModel: ObservableObject {
         case licensed
     }
     
-    @Published private(set) var licenseState: LicenseState = .trial(daysRemaining: 7)  // Default to trial
+    @Published private(set) var licenseState: LicenseState = .licensed  // Always licensed
     @Published var licenseKey: String = ""
     @Published var isValidating = false
     @Published var validationMessage: String?
@@ -20,7 +20,9 @@ class LicenseViewModel: ObservableObject {
     private let userDefaults = UserDefaults.standard
     
     init() {
-        loadLicenseState()
+        // Skip license checks and always activate license on startup
+        licenseState = .licensed
+        NotificationCenter.default.post(name: .licenseStatusChanged, object: nil)
     }
     
     func startTrial() {
