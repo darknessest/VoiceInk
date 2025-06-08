@@ -60,6 +60,21 @@ jobs:
         cd whisper.cpp
         git log --oneline -1
         
+    - name: Cache whisper.cpp build
+      id: cache-whispercpp
+      uses: actions/cache@v4
+      with:
+        path: |
+          whisper.cpp/build-apple
+          whisper.cpp/build-macos
+        key: whispercpp-build-${{ hashFiles('whisper.cpp/.git') }}-${{ hashFiles('whisper.cpp/.gitmodules') }}-${{ steps.get-whispercpp-sha.outputs.whispercpp_sha }}
+        restore-keys: |
+          whispercpp-build-
+
+    - name: Get whisper.cpp submodule commit
+      id: get-whispercpp-sha
+      run: echo "whispercpp_sha=$(git submodule status whisper.cpp | awk '{print $1}')" >> $GITHUB_OUTPUT
+
     - name: Build whisper.cpp for macOS arm64
       run: |
         bash build-macos-arm64.sh
