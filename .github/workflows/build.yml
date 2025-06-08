@@ -12,6 +12,8 @@ on:
       - '.github/workflows/build.yml'
   pull_request:
     branches: [ main ]
+  release:
+    types: [published]
 
 env:
   DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
@@ -88,14 +90,23 @@ jobs:
           CODE_SIGN_IDENTITY="" \
           build
 
-    - name: Archive build artifacts
-      uses: actions/upload-artifact@v4
-      if: success()
+    - name: Create DMG from .app
+      if: github.event_name == 'release'
+      run: |
+        brew install create-dmg
+        create-dmg \
+          --volname "VoiceInk" \
+          --window-pos 200 120 \
+          --window-size 800 400 \
+          --icon-size 100 \
+          --app-drop-link 600 185 \
+          build/Build/Products/Release/VoiceInk.app \
+          build/Build/Products/Release/
+
+    - name: Upload Release DMG
+      uses: softprops/action-gh-release@v2
+      if: github.event_name == 'release'
       with:
-        name: VoiceInk-build-${{ github.sha }}
-        path: |
-          build/Build/Products/Release/VoiceInk.app
-          whisper.cpp/build-macos/framework/whisper.framework
-          whisper.cpp/build-apple/whisper.xcframework
-        retention-days: 30
-        
+        files: build/Build/Products/Release/VoiceInk*.dmg
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
