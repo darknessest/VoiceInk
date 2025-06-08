@@ -112,8 +112,8 @@ jobs:
           --window-size 800 400 \
           --icon-size 100 \
           --app-drop-link 600 185 \
-          build/Build/Products/Release/VoiceInk.app \
-          build/Build/Products/Release/VoiceInk.dmg
+          build/Build/Products/Release/VoiceInk.dmg \
+          build/Build/Products/Release/VoiceInk.app
 
     - name: Upload Release DMG
       uses: softprops/action-gh-release@v2
