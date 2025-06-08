@@ -66,8 +66,17 @@ jobs:
         
         # Create the XCFramework that the Xcode project expects
         mkdir -p build-apple
+        
+        # Check what library files we have
+        echo "Available library files:"
+        ls -la build-macos/src/Release/libwhisper*
+        
+        # Use the actual versioned library file instead of the symlink
+        ACTUAL_LIB=$(find build-macos/src/Release -name "libwhisper*.dylib" ! -type l | head -1)
+        echo "Using library file: $ACTUAL_LIB"
+        
         xcodebuild -create-xcframework \
-          -library build-macos/src/Release/libwhisper.dylib \
+          -library "$ACTUAL_LIB" \
           -headers include \
           -output build-apple/whisper.xcframework
         
@@ -96,6 +105,17 @@ jobs:
         if [ -d "whisper.cpp/build-apple/whisper.xcframework/macos-arm64" ]; then
           echo "✅ Found macos-arm64 directory"
           ls -la whisper.cpp/build-apple/whisper.xcframework/macos-arm64/
+          
+          # Check if the actual library file exists (not just symlinks)
+          echo "🔍 Checking for actual library files..."
+          find whisper.cpp/build-apple/whisper.xcframework/macos-arm64 -name "*.dylib" -type f
+          if find whisper.cpp/build-apple/whisper.xcframework/macos-arm64 -name "*.dylib" -type f | grep -q dylib; then
+            echo "✅ Found actual library files in XCFramework"
+          else
+            echo "❌ No actual library files found, only symlinks"
+            echo "All files in macos-arm64:"
+            find whisper.cpp/build-apple/whisper.xcframework/macos-arm64 -type f -o -type l
+          fi
         else
           echo "❌ macos-arm64 directory not found"
           echo "Available directories:"
