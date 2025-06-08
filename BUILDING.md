@@ -8,32 +8,77 @@ Before you begin, ensure you have:
 - macOS 14.0 or later
 - Xcode (latest version recommended)
 - Swift (latest version recommended)
+- CMake 3.28.0 or later (`brew install cmake`)
+
+**Note:** The CMake requirement is for building whisper.cpp. If you're only building VoiceInk with a pre-built whisper.xcframework, CMake is not required.
 
 ## Building whisper.cpp Framework
 
-1. Clone and build whisper.cpp:
+whisper.cpp is included as a git submodule. After cloning the repository, you need to initialize and build it:
+
+1. Initialize and update submodules:
 ```bash
-git clone https://github.com/ggerganov/whisper.cpp.git
+git submodule update --init --recursive
+```
+
+2. Build whisper.cpp XCFramework:
+```bash
 cd whisper.cpp
 ./build-xcframework.sh
 ```
-This will create the XCFramework at `build-apple/whisper.xcframework`.
+This will create the XCFramework at `whisper.cpp/build-apple/whisper.xcframework`.
 
 ## Building VoiceInk
 
-1. Clone the VoiceInk repository:
+1. Clone the VoiceInk repository with submodules:
 ```bash
-git clone https://github.com/Beingpax/VoiceInk.git
+git clone --recurse-submodules https://github.com/Beingpax/VoiceInk.git
 cd VoiceInk
 ```
 
-2. Add the whisper.xcframework to your project:
-   - Drag and drop `../whisper.cpp/build-apple/whisper.xcframework` into the project navigator, or
+2. If you've already cloned without submodules, initialize them:
+```bash
+git submodule update --init --recursive
+```
+
+3. Build whisper.cpp (if not already done):
+```bash
+cd whisper.cpp
+./build-xcframework.sh
+cd ..
+```
+
+4. Add the whisper.xcframework to your project:
+   - Drag and drop `whisper.cpp/build-apple/whisper.xcframework` into the project navigator, or
    - Add it manually in the "Frameworks, Libraries, and Embedded Content" section of project settings
 
-3. Build and Run
-   - Build the project using Cmd+B or Product > Build
-   - Run the project using Cmd+R or Product > Run
+5. Build and Run
+   - **Option 1:** Use the provided build script:
+     ```bash
+     ./build.sh
+     ```
+   - **Option 2:** Build manually using Xcode:
+     - Build the project using Cmd+B or Product > Build
+     - Run the project using Cmd+R or Product > Run
+   - **Option 3:** Build using xcodebuild:
+     ```bash
+     xcodebuild -project VoiceInk.xcodeproj -scheme VoiceInk -configuration Debug build
+     ```
+
+## Automated Building with GitHub Actions
+
+The project includes a GitHub Actions workflow that automatically builds VoiceInk when changes are pushed to the repository.
+
+The workflow:
+1. Checks out the repository with all submodules
+2. Sets up the latest stable Xcode version
+3. Builds the whisper.cpp XCFramework
+4. Builds the VoiceInk project
+5. Archives the build artifacts
+
+The workflow is triggered on:
+- Push to `main` or `develop` branches
+- Pull requests to `main` branch
 
 ## Development Setup
 
@@ -57,10 +102,20 @@ cd VoiceInk
 ## Troubleshooting
 
 If you encounter any build issues:
-1. Clean the build folder (Cmd+Shift+K)
-2. Clean the build cache (Cmd+Shift+K twice)
-3. Check Xcode and macOS versions
-4. Verify all dependencies are properly installed
-5. Make sure whisper.xcframework is properly built and linked
+
+### Common Issues
+
+1. **CMake not found**: Install CMake with `brew install cmake`
+2. **Xcode build fails**: 
+   - Clean the build folder (Cmd+Shift+K)
+   - Clean the build cache (Cmd+Shift+K twice)
+3. **whisper.xcframework not found**: Ensure you've built whisper.cpp first using `./build-xcframework.sh` in the whisper.cpp directory
+4. **Submodule issues**: Run `git submodule update --init --recursive`
+
+### General Steps
+1. Check Xcode and macOS versions
+2. Verify all dependencies are properly installed
+3. Make sure whisper.xcframework is properly built and linked
+4. Try running the build script: `./build.sh`
 
 For more help, please check the [issues](https://github.com/Beingpax/VoiceInk/issues) section or create a new issue. 

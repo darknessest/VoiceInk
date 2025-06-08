@@ -1,0 +1,96 @@
+name: Build VoiceInk
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+        
+    - name: Install dependencies
+      run: |
+        brew install cmake
+        
+    - name: Show tool versions
+      run: |
+        xcodebuild -version
+        cmake --version
+      
+    - name: Show whisper.cpp version
+      run: |
+        cd whisper.cpp
+        git log --oneline -1
+        
+    - name: Build whisper.cpp XCFramework
+      run: |
+        cd whisper.cpp
+        chmod +x build-xcframework.sh
+        ./build-xcframework.sh
+        ls -la build-apple/
+        
+    - name: Verify XCFramework
+      run: |
+        if [ ! -d "whisper.cpp/build-apple/whisper.xcframework" ]; then
+          echo "❌ Error: whisper.xcframework was not built successfully"
+          exit 1
+        fi
+        echo "✅ whisper.xcframework found"
+        ls -la whisper.cpp/build-apple/whisper.xcframework/
+        
+    - name: List Xcode schemes
+      run: xcodebuild -project VoiceInk.xcodeproj -list
+        
+    - name: Build VoiceInk
+      run: |
+        xcodebuild -project VoiceInk.xcodeproj \
+          -scheme VoiceInk \
+          -configuration Debug \
+          -derivedDataPath build \
+          -destination 'platform=macOS' \
+          build
+          
+    - name: Verify build artifacts
+      run: |
+        ls -la build/Build/Products/Debug/
+        if [ -d "build/Build/Products/Debug/VoiceInk.app" ]; then
+          echo "✅ VoiceInk.app built successfully"
+          du -sh build/Build/Products/Debug/VoiceInk.app
+        else
+          echo "❌ VoiceInk.app not found"
+          exit 1
+        fi
+          
+    - name: Archive build artifacts
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: VoiceInk-build-${{ github.sha }}
+        path: |
+          build/Build/Products/Debug/VoiceInk.app
+          whisper.cpp/build-apple/whisper.xcframework
+        retention-days: 30
+        
+    - name: Test with build script
+      run: |
+        echo "Testing build script..."
+        chmod +x build.sh
+        # Don't actually run it since we already built, just check syntax
+        bash -n build.sh
+        echo "✅ Build script syntax is valid" 
