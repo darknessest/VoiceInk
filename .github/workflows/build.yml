@@ -75,6 +75,13 @@ jobs:
           name: whispercpp-build-${{ needs.build-whispercpp.outputs.whispercpp_sha }}
           path: whisper.cpp/build-apple/*
 
+      - name: List contents of whisper.cpp/build-apple
+        run: |
+          echo "Listing contents of whisper.cpp/build-apple:"
+          ls -lR whisper.cpp/build-apple
+          echo "Listing contents of the root directory:"
+          ls -lR .
+
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
