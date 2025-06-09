@@ -54,7 +54,6 @@ jobs:
         run: bash build-macos-arm64.sh
 
       - name: Upload whisper.cpp build artifact
-        if: steps.cache-whispercpp.outputs.cache-hit != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: whispercpp-build-${{ steps.get-whispercpp-sha.outputs.whispercpp_sha }}
