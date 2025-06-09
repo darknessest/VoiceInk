@@ -72,7 +72,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: whispercpp-build-${{ needs.build-whispercpp.outputs.whispercpp_sha }}
-          path: whisper.cpp/build-apple/*
+          path: whisper.cpp/build-apple
 
       - name: List contents of whisper.cpp/build-apple
         run: |
