@@ -98,10 +98,11 @@ If you encounter any issues or have questions, please:
 
 # Important Note About Unsigned Releases
 
-The DMG file provided in the [GitHub Releases](https://github.com/Beingpax/VoiceInk/releases) is an **unsigned app**. This means:
+The DMG file provided in the [GitHub Releases](https://github.com/darknessest/VoiceInk/releases) is an **unsigned app**. This means:
 
 - **Most features will work out of the box**
 - **Accessibility permissions (required for autopaste of transcript) will NOT work** unless the app is properly signed
+- App will be blocked by Gatekeeper. You can bypass this by opening "Settings" -> "Privacy & Security" -> "Open anyway"
 
 If you want to use the autopaste feature (which requires Accessibility permissions), you must sign the app locally.
 
