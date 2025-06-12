@@ -142,6 +142,29 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             build
 
+      - name: Import Apple Development certificate
+        id: import-cert
+        if: github.event_name == 'release'
+        uses: apple-actions/import-codesign-certs@v5
+        with:
+          p12-file-base64: ${{ secrets.MACOS_CERTIFICATE }}
+          p12-password:    ${{ secrets.MACOS_CERT_PASSWORD }}
+
+      - name: Sign app bundle
+        if: github.event_name == 'release'
+        run: |
+          APP_PATH="build/Build/Products/Release/VoiceInk.app"
+          echo "Signing $APP_PATH with Apple Development identity..."
+          codesign --deep --force --options runtime \
+                   --sign "Apple Development" "$APP_PATH"
+
+      - name: Verify signature
+        if: github.event_name == 'release'
+        run: |
+          APP_PATH="build/Build/Products/Release/VoiceInk.app"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+
+
       - name: Create DMG from .app
         if: github.event_name == 'release'
         run: |
