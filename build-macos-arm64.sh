@@ -127,6 +127,8 @@ EOF
     <string>org.ggml.whisper</string>
     <key>CFBundleVersion</key>
     <string>1</string>
+    <key>CFBundlePackageType</key>
+    <string>FMWK</string>
     <key>MinimumOSVersion</key>
     <string>${min_os_version}</string>
     <key>CFBundleSupportedPlatforms</key>
