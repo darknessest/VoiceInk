@@ -68,6 +68,8 @@ COMMON_CMAKE_ARGS=(
     -DOpenMP_omp_LIBRARY="$(brew --prefix libomp)/lib/libomp.dylib"
 )
 
+LIBOMP_SRC="$(brew --prefix libomp)/lib/libomp.dylib"
+
 # Function to create framework structure (macOS only)
 setup_framework_structure() {
     local build_dir=$1
@@ -177,6 +179,22 @@ combine_static_libraries() {
     rm -rf "${base_dir}/${build_dir}/temp"
 }
 
+# ── NEW – embed libomp.dylib inside the framework ──────────────
+embed_libomp() {
+    local fw_root="$1/framework/whisper.framework/Versions/A"
+    echo "📦 Embedding libomp.dylib inside whisper.framework"
+
+    cp "$LIBOMP_SRC" "$fw_root/libomp.dylib"
+
+    # Give the dylib a relative install-name
+    install_name_tool -id "@rpath/libomp.dylib" "$fw_root/libomp.dylib"
+
+    # Make whisper look for the embedded copy
+    install_name_tool -change "/opt/homebrew/*/libomp.dylib" \
+                      "@rpath/libomp.dylib" \
+                      "$fw_root/whisper"
+}
+
 # Build for macOS arm64
 echo "🔨 Configuring CMake (Xcode generator)..."
 cmake -B build-macos -G Xcode \
@@ -194,6 +212,7 @@ cmake --build build-macos --config Release -- -quiet
 # Create framework & XCFramework
 setup_framework_structure "build-macos" ${MACOS_MIN_OS_VERSION}
 combine_static_libraries "build-macos" "Release"
+embed_libomp "build-macos"
 
 echo "✅ Creating XCFramework..."
 xcodebuild -create-xcframework \
