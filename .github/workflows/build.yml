@@ -13,6 +13,9 @@ on:
     types: [published]
   workflow_dispatch:
 
+env:
+  XCODE_VERSION: '16.2'
+
 jobs:
   build-whispercpp:
     runs-on: macos-latest
@@ -44,6 +47,12 @@ jobs:
           key: brew-${{ runner.os }}-${{ hashFiles('.github/workflows/build.yml') }}
           restore-keys: |
             brew-${{ runner.os }}-
+      
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        if: steps.cache-whispercpp.outputs.cache-hit != 'true'
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
 
       - name: Install dependencies
         run: brew install cmake ccache libomp openblas create-dmg --formula
@@ -90,7 +99,7 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '16.2'
+          xcode-version: ${{ env.XCODE_VERSION }}
 
       - name: Install dependencies
         run: |
