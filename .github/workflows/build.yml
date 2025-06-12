@@ -53,11 +53,14 @@ jobs:
         if: steps.cache-whispercpp.outputs.cache-hit != 'true'
         run: bash build-macos-arm64.sh
 
-      - name: Upload whisper.cpp build artifact
+      - name: Package whisper.cpp build directory
+        run: tar -C whisper.cpp -czf build-apple.tar.gz build-apple
+
+      - name: Upload packaged whisper.cpp build
         uses: actions/upload-artifact@v4
         with:
-          name: whispercpp-build-${{ steps.get-whispercpp-sha.outputs.whispercpp_sha }}
-          path: whisper.cpp/build-apple/*
+          name: whisper-build-${{ steps.get-whispercpp-sha.outputs.whispercpp_sha }}
+          path: build-apple.tar.gz
 
   build-app:
     runs-on: macos-latest
@@ -71,15 +74,18 @@ jobs:
       - name: Download whisper.cpp build artifact
         uses: actions/download-artifact@v4
         with:
-          name: whispercpp-build-${{ needs.build-whispercpp.outputs.whispercpp_sha }}
-          path: whisper.cpp/build-apple
+          name: whisper-build-${{ needs.build-whispercpp.outputs.whispercpp_sha }}
+          path: .
+
+      - name: Extract whisper.cpp build
+        run: |
+          mkdir -p whisper.cpp
+          tar -xzf build-apple.tar.gz -C whisper.cpp
 
       - name: List contents of whisper.cpp/build-apple
         run: |
           echo "Listing contents of whisper.cpp/build-apple:"
           ls -lR whisper.cpp/build-apple
-          echo "Listing contents of the root directory:"
-          ls -lR .
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
