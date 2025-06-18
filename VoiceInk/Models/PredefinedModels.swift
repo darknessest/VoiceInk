@@ -27,22 +27,19 @@ import Foundation
  }
  
  enum PredefinedModels {
-     static func getLanguageDictionary(isMultilingual: Bool, isLargeV3: Bool = false) -> [String:
-         String]
-     {
-         if !isMultilingual {
-             return ["en": "English"]
-         } else if isLargeV3 {
-             return allLanguages // Large v3 models support all languages including Cantonese
-         } else {
-             // Create a dictionary without Cantonese for non-Large v3 models
-             var languagesWithoutCantonese = allLanguages
-             languagesWithoutCantonese.removeValue(forKey: "yue")
-             return languagesWithoutCantonese
-         }
-     }
- 
-     static let models: [any TranscriptionModel] = [
+    static func getLanguageDictionary(isMultilingual: Bool) -> [String: String] {
+        if !isMultilingual {
+            return ["en": "English"]
+        } else {
+            return allLanguages
+        }
+    }
+    
+    static var models: [any TranscriptionModel] {
+        return predefinedModels + CustomModelManager.shared.customModels
+    }
+    
+    private static let predefinedModels: [any TranscriptionModel] = [
          // Local Models
          LocalModel(
              name: "ggml-tiny",
@@ -92,7 +89,7 @@ import Foundation
              name: "ggml-large-v3",
              displayName: "Large v3",
              size: "2.9 GiB",
-             supportedLanguages: getLanguageDictionary(isMultilingual: true, isLargeV3: true),
+             supportedLanguages: getLanguageDictionary(isMultilingual: true),
              description: "Large model v3, very slow but most accurate",
              speed: 0.3,
              accuracy: 0.98,
@@ -103,7 +100,7 @@ import Foundation
              name: "ggml-large-v3-turbo",
              displayName: "Large v3 Turbo",
              size: "1.5 GiB",
-             supportedLanguages: getLanguageDictionary(isMultilingual: true, isLargeV3: true),
+             supportedLanguages: getLanguageDictionary(isMultilingual: true),
              description:
              "Large model v3 Turbo, faster than v3 with similar accuracy",
              speed: 0.75,
@@ -115,7 +112,7 @@ import Foundation
              name: "ggml-large-v3-turbo-q5_0",
              displayName: "Large v3 Turbo (Quantized)",
              size: "547 MiB",
-             supportedLanguages: getLanguageDictionary(isMultilingual: true, isLargeV3: true),
+             supportedLanguages: getLanguageDictionary(isMultilingual: true),
              description: "Quantized version of Large v3 Turbo, faster with slightly lower accuracy",
              speed: 0.75,
              accuracy: 0.95,
@@ -132,7 +129,7 @@ import Foundation
             speed: 0.65,
             accuracy: 0.96,
             isMultilingual: true,
-            supportedLanguages: getLanguageDictionary(isMultilingual: true, isLargeV3: true)
+            supportedLanguages: getLanguageDictionary(isMultilingual: true)
         ),
         CloudModel(
            name: "scribe_v1",
@@ -142,9 +139,18 @@ import Foundation
            speed: 0.7,
            accuracy: 0.98,
            isMultilingual: true,
-           supportedLanguages: getLanguageDictionary(isMultilingual: true, isLargeV3: true)
+           supportedLanguages: getLanguageDictionary(isMultilingual: true)
        ),
-
+       CloudModel(
+           name: "nova-2",
+           displayName: "Nova (Deepgram)",
+           description: "Deepgram's Nova model for fast, accurate, and cost-effective transcription.",
+           provider: .deepgram,
+           speed: 0.9,
+           accuracy: 0.95,
+           isMultilingual: true,
+           supportedLanguages: getLanguageDictionary(isMultilingual: true)
+       ),
      ]
  
      static let allLanguages = [
