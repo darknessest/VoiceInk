@@ -21,6 +21,13 @@ struct CustomProviderSettingsView: View {
     @State private var showAlert: Bool = false
     @State private var alertMessage: String = ""
 
+    // Manager handling multiple presets
+    @StateObject private var providerManager = CustomAIProviderManager.shared
+
+    // Sheet toggles for adding/editing provider presets
+    @State private var isAddingProvider: Bool = false
+    @State private var providerToEdit: CustomAIProvider? = nil
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Header
@@ -45,6 +52,47 @@ struct CustomProviderSettingsView: View {
 
             // API-key management (unchanged from original logic)
             apiKeySection
+
+            // Preset picker
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Preset")
+                    Spacer()
+                    Button(action: { isAddingProvider = true }) {
+                        Image(systemName: "plus")
+                    }
+                    .help("Add new preset")
+                    .buttonStyle(.borderless)
+                }
+
+                Picker("Preset", selection: Binding(
+                    get: { providerManager.selectedProviderId ?? UUID() },
+                    set: { newId in
+                        providerManager.selectedProviderId = newId
+                        if let sel = providerManager.selectedProvider {
+                            aiService.customBaseURL = sel.baseURL
+                            aiService.customModel   = sel.model
+                        }
+                    })) {
+                    ForEach(providerManager.providers, id: \.id) { provider in
+                        Text(provider.name).tag(provider.id)
+                    }
+                }
+                .pickerStyle(.popUp)
+
+                if let selected = providerManager.selectedProvider {
+                    HStack(spacing: 12) {
+                        Button("Edit") { providerToEdit = selected }
+                            .buttonStyle(.borderless)
+                        Button(role: .destructive) {
+                            providerManager.deleteProvider(selected)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+            }
         }
         .padding()
         .background(Color.secondary.opacity(0.03))
@@ -58,6 +106,12 @@ struct CustomProviderSettingsView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(alertMessage)
+        }
+        .sheet(isPresented: $isAddingProvider) {
+            ProviderPresetEditorView(mode: .add)
+        }
+        .sheet(item: $providerToEdit) { provider in
+            ProviderPresetEditorView(mode: .edit(provider))
         }
     }
 }
@@ -79,6 +133,10 @@ private extension CustomProviderSettingsView {
                         aiService.customBaseURL = draftBaseURL
                         aiService.customModel   = draftModel
                         isEditingConfig = false
+                        if let selected = providerManager.selectedProvider {
+                            let updated = CustomAIProvider(id: selected.id, name: selected.name, baseURL: draftBaseURL, model: draftModel)
+                            providerManager.updateProvider(updated)
+                        }
                     }
                     .disabled(draftBaseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
                               draftModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
