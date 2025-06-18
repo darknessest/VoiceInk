@@ -78,7 +78,7 @@ struct CustomProviderSettingsView: View {
                         Text(provider.name).tag(provider.id)
                     }
                 }
-                .pickerStyle(.popUp)
+                .pickerStyle(.menu)
 
                 if let selected = providerManager.selectedProvider {
                     HStack(spacing: 12) {
