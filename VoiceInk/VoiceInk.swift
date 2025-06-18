@@ -53,6 +53,9 @@ struct VoiceInkApp: App {
         let aiService = AIService()
         _aiService = StateObject(wrappedValue: aiService)
         
+        // Bind custom-provider manager so it can keep AIService in sync
+        CustomAIProviderManager.shared.bind(to: aiService)
+        
         let updaterViewModel = UpdaterViewModel()
         _updaterViewModel = StateObject(wrappedValue: updaterViewModel)
         
