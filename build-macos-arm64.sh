@@ -179,20 +179,20 @@ combine_static_libraries() {
     rm -rf "${base_dir}/${build_dir}/temp"
 }
 
-# ── NEW – embed libomp.dylib inside the framework ──────────────
 embed_libomp() {
     local fw_root="$1/framework/whisper.framework/Versions/A"
     echo "📦 Embedding libomp.dylib inside whisper.framework"
 
+    # Copy the libomp.dylib that we just linked against into the framework bundle
     cp "$LIBOMP_SRC" "$fw_root/libomp.dylib"
 
-    # Give the dylib a relative install-name
-    install_name_tool -id "@rpath/libomp.dylib" "$fw_root/libomp.dylib"
+    # 1. Make the copied dylib reference itself via a relative path so that it can be located
+    #    no matter where the framework ends up inside the final .app bundle.
+    install_name_tool -id "@loader_path/libomp.dylib" "$fw_root/libomp.dylib"
 
-    # Make whisper look for the embedded copy
-    install_name_tool -change "/opt/homebrew/*/libomp.dylib" \
-                      "@rpath/libomp.dylib" \
-                      "$fw_root/whisper"
+    # 2. Tell the whisper binary inside the framework to look for that local copy instead of the
+    #    Homebrew-installed one that was used at build-time.
+    install_name_tool -change "$LIBOMP_SRC" "@loader_path/libomp.dylib" "$fw_root/whisper"
 }
 
 # Build for macOS arm64
