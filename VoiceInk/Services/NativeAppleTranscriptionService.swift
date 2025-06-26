@@ -2,9 +2,18 @@ import Foundation
 import AVFoundation
 import os
 
-#if canImport(Speech)
+// The new SpeechAnalyzer / SpeechTranscriber APIs targeted by this service are only available in a future macOS release
+// (Darwin 26) which, at the time of writing, ships with Xcode 16 and Swift 6.0. To keep VoiceInk building on the current
+// public Xcode releases we build two variants of this file:
+//  • If the compiler is Swift 6.0 **or later** we assume the 26 SDK is available and build the full implementation.
+//  • Otherwise we build a lightweight stub that simply throws an "unsupported" error.
+//
+// When the CI image / developer machine upgrades to the newer SDK the full implementation will be compiled automatically
+// without any further changes.
+
+#if swift(>=6.0) && canImport(Speech)
+
 import Speech
-#endif
 
 /// Transcription service that leverages the new SpeechAnalyzer / SpeechTranscriber API available on macOS 26 (Tahoe).
 /// Falls back with an unsupported-provider error on earlier OS versions so the application can gracefully degrade.
@@ -62,7 +71,6 @@ class NativeAppleTranscriptionService: TranscriptionService {
             throw ServiceError.unsupportedOS
         }
         
-        #if canImport(Speech)
         logger.notice("Starting Apple native transcription with SpeechAnalyzer.")
         
         let audioFile = try AVAudioFile(forReading: audioURL)
@@ -137,27 +145,19 @@ class NativeAppleTranscriptionService: TranscriptionService {
         
         logger.notice("Native transcription successful. Length: \(finalTranscription.count) characters.")
         return finalTranscription
-        
-        #else
-        logger.error("Speech framework is not available")
-        throw ServiceError.unsupportedOS
-        #endif
     }
     
     @available(macOS 26, *)
     private func deallocateExistingAssets() async throws {
-        #if canImport(Speech)
         // Deallocate any existing allocated locales to avoid conflicts
         for locale in await AssetInventory.allocatedLocales {
             await AssetInventory.deallocate(locale: locale)
         }
         logger.notice("Deallocated existing asset locales.")
-        #endif
     }
     
     @available(macOS 26, *)
     private func allocateAssetsForLocale(_ locale: Locale) async throws {
-        #if canImport(Speech)
         do {
             try await AssetInventory.allocate(locale: locale)
             logger.notice("Successfully allocated assets for locale: '\(locale.identifier(.bcp47))'")
@@ -165,12 +165,10 @@ class NativeAppleTranscriptionService: TranscriptionService {
             logger.error("Failed to allocate assets for locale '\(locale.identifier(.bcp47))': \(error.localizedDescription)")
             throw ServiceError.assetAllocationFailed
         }
-        #endif
     }
     
     @available(macOS 26, *)
     private func ensureModelIsAvailable(for transcriber: SpeechTranscriber, locale: Locale) async throws {
-        #if canImport(Speech)
         let installedLocales = await SpeechTranscriber.installedLocales
         let isInstalled = installedLocales.map({ $0.identifier(.bcp47) }).contains(locale.identifier(.bcp47))
 
@@ -185,6 +183,22 @@ class NativeAppleTranscriptionService: TranscriptionService {
                 // Note: We don't throw an error here, as transcription might still work with a base model.
             }
         }
-        #endif
     }
-} 
+}
+
+#endif 
+
+#if !(swift(>=6.0) && canImport(Speech))
+
+/// Fallback stub that allows VoiceInk to compile on current public Xcode builds where the
+/// SpeechAnalyzer / SpeechTranscriber APIs are not yet available.
+class NativeAppleTranscriptionService: TranscriptionService {
+    enum ServiceError: Error {
+        case unsupportedOS
+    }
+    func transcribe(audioURL: URL, model: any TranscriptionModel) async throws -> String {
+        throw ServiceError.unsupportedOS
+    }
+}
+
+#endif 
