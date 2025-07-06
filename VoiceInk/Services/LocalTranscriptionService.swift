@@ -63,7 +63,11 @@ class LocalTranscriptionService: TranscriptionService {
         
         // Transcribe
         await whisperContext.fullTranscribe(samples: data)
-        let text = await whisperContext.getTranscription()
+        var text = await whisperContext.getTranscription()
+        
+        if UserDefaults.standard.object(forKey: "IsTextFormattingEnabled") as? Bool ?? true {
+            text = WhisperTextFormatter.format(text)
+        }
         
         logger.notice("✅ Local transcription completed successfully.")
         

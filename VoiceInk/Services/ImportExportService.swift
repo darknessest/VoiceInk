@@ -6,8 +6,9 @@ import LaunchAtLogin
 
 struct GeneralSettings: Codable {
     let toggleMiniRecorderShortcut: KeyboardShortcuts.Shortcut?
-    let isPushToTalkEnabled: Bool?
-    let pushToTalkKeyRawValue: String?
+    let toggleMiniRecorderShortcut2: KeyboardShortcuts.Shortcut?
+    let selectedHotkey1RawValue: String?
+    let selectedHotkey2RawValue: String?
     let launchAtLoginEnabled: Bool?
     let isMenuBarOnly: Bool?
     let useAppleScriptPaste: Bool?
@@ -17,6 +18,8 @@ struct GeneralSettings: Codable {
     let isAutoCopyEnabled: Bool?
     let isSoundFeedbackEnabled: Bool?
     let isSystemMuteEnabled: Bool?
+    let isFallbackWindowEnabled: Bool?
+    let isTextFormattingEnabled: Bool?
 }
 
 struct VoiceInkExportedSettings: Codable {
@@ -37,8 +40,7 @@ class ImportExportService {
     private let dictionaryItemsKey = "CustomDictionaryItems"
     private let wordReplacementsKey = "wordReplacements"
 
-    private let keyIsPushToTalkEnabled = "isPushToTalkEnabled"
-    private let keyPushToTalkKey = "pushToTalkKey"
+
     private let keyIsMenuBarOnly = "IsMenuBarOnly"
     private let keyUseAppleScriptPaste = "UseAppleScriptPaste"
     private let keyRecorderType = "RecorderType"
@@ -47,6 +49,7 @@ class ImportExportService {
     private let keyIsAutoCopyEnabled = "IsAutoCopyEnabled"
     private let keyIsSoundFeedbackEnabled = "isSoundFeedbackEnabled"
     private let keyIsSystemMuteEnabled = "isSystemMuteEnabled"
+    private let keyIsTextFormattingEnabled = "IsTextFormattingEnabled"
 
     private init() {
         if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
@@ -79,8 +82,9 @@ class ImportExportService {
 
         let generalSettingsToExport = GeneralSettings(
             toggleMiniRecorderShortcut: KeyboardShortcuts.getShortcut(for: .toggleMiniRecorder),
-            isPushToTalkEnabled: hotkeyManager.isPushToTalkEnabled,
-            pushToTalkKeyRawValue: hotkeyManager.pushToTalkKey.rawValue,
+            toggleMiniRecorderShortcut2: KeyboardShortcuts.getShortcut(for: .toggleMiniRecorder2),
+            selectedHotkey1RawValue: hotkeyManager.selectedHotkey1.rawValue,
+            selectedHotkey2RawValue: hotkeyManager.selectedHotkey2.rawValue,
             launchAtLoginEnabled: LaunchAtLogin.isEnabled,
             isMenuBarOnly: menuBarManager.isMenuBarOnly,
             useAppleScriptPaste: UserDefaults.standard.bool(forKey: keyUseAppleScriptPaste),
@@ -89,7 +93,9 @@ class ImportExportService {
             audioRetentionPeriod: UserDefaults.standard.integer(forKey: keyAudioRetentionPeriod),
             isAutoCopyEnabled: whisperState.isAutoCopyEnabled,
             isSoundFeedbackEnabled: soundManager.isEnabled,
-            isSystemMuteEnabled: mediaController.isSystemMuteEnabled
+            isSystemMuteEnabled: mediaController.isSystemMuteEnabled,
+            isFallbackWindowEnabled: UserDefaults.standard.object(forKey: "isFallbackWindowEnabled") == nil ? true : UserDefaults.standard.bool(forKey: "isFallbackWindowEnabled"),
+            isTextFormattingEnabled: UserDefaults.standard.object(forKey: keyIsTextFormattingEnabled) as? Bool ?? true
         )
 
         let exportedSettings = VoiceInkExportedSettings(
@@ -206,12 +212,16 @@ class ImportExportService {
                         if let shortcut = general.toggleMiniRecorderShortcut {
                             KeyboardShortcuts.setShortcut(shortcut, for: .toggleMiniRecorder)
                         }
-                        if let pttEnabled = general.isPushToTalkEnabled {
-                            hotkeyManager.isPushToTalkEnabled = pttEnabled
+                        if let shortcut2 = general.toggleMiniRecorderShortcut2 {
+                            KeyboardShortcuts.setShortcut(shortcut2, for: .toggleMiniRecorder2)
                         }
-                        if let pttKeyRaw = general.pushToTalkKeyRawValue,
-                           let pttKey = HotkeyManager.PushToTalkKey(rawValue: pttKeyRaw) {
-                            hotkeyManager.pushToTalkKey = pttKey
+                        if let hotkeyRaw = general.selectedHotkey1RawValue,
+                           let hotkey = HotkeyManager.HotkeyOption(rawValue: hotkeyRaw) {
+                            hotkeyManager.selectedHotkey1 = hotkey
+                        }
+                        if let hotkeyRaw2 = general.selectedHotkey2RawValue,
+                           let hotkey2 = HotkeyManager.HotkeyOption(rawValue: hotkeyRaw2) {
+                            hotkeyManager.selectedHotkey2 = hotkey2
                         }
                         if let launch = general.launchAtLoginEnabled {
                             LaunchAtLogin.isEnabled = launch
@@ -239,6 +249,12 @@ class ImportExportService {
                         }
                         if let muteSystem = general.isSystemMuteEnabled {
                             mediaController.isSystemMuteEnabled = muteSystem
+                        }
+                        if let fallbackEnabled = general.isFallbackWindowEnabled {
+                            UserDefaults.standard.set(fallbackEnabled, forKey: "isFallbackWindowEnabled")
+                        }
+                        if let textFormattingEnabled = general.isTextFormattingEnabled {
+                            UserDefaults.standard.set(textFormattingEnabled, forKey: self.keyIsTextFormattingEnabled)
                         }
                     }
 
