@@ -18,7 +18,7 @@ env:
 
 jobs:
   build-whispercpp:
-    runs-on: macos-latest
+    runs-on: macos-15
     outputs:
       whispercpp_sha: ${{ steps.get-whispercpp-sha.outputs.whispercpp_sha }}
     steps:
