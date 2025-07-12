@@ -73,7 +73,7 @@ jobs:
           path: build-apple.tar.gz
 
   build-app:
-    runs-on: macos-latest
+    runs-on: macos-15
     needs: build-whispercpp
     steps:
       - name: Checkout repository
