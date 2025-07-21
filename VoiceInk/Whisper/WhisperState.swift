@@ -190,9 +190,8 @@ class WhisperState: NSObject, ObservableObject {
         
                         } catch {
                             self.logger.error("❌ Failed to start recording: \(error.localizedDescription)")
-                            await MainActor.run {
-                                self.recordingState = .idle
-                            }
+                            await NotificationManager.shared.showNotification(title: "Recording failed to start", type: .error)
+                            await self.dismissMiniRecorder()
                             // Do not remove the file on a failed start, to preserve all recordings.
                             self.recordedFile = nil
                         }
@@ -340,6 +339,15 @@ class WhisperState: NSObject, ObservableObject {
                 
                 if self.isAutoCopyEnabled {
                     ClipboardManager.copyToClipboard(text)
+                }
+
+                // Automatically press Enter if the active Power Mode configuration allows it.
+                let powerMode = PowerModeManager.shared
+                if powerMode.isPowerModeEnabled && powerMode.currentActiveConfiguration.isAutoSendEnabled {
+                    // Slight delay to ensure the paste operation completes
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        CursorPaster.pressEnter()
+                    }
                 }
             }
             

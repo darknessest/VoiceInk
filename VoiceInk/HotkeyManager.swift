@@ -38,7 +38,7 @@ class HotkeyManager: ObservableObject {
     // Key state tracking
     private var currentKeyState = false
     private var keyPressStartTime: Date?
-    private let briefPressThreshold = 1.0 // 1 second threshold for brief press
+    private let briefPressThreshold = 1.7
     private var isHandsFreeMode = false
     
     // Debounce for Fn key
@@ -116,10 +116,11 @@ class HotkeyManager: ObservableObject {
         self.selectedHotkey2 = HotkeyOption(rawValue: UserDefaults.standard.string(forKey: "selectedHotkey2") ?? "") ?? .none
         self.whisperState = whisperState
         self.miniRecorderShortcutManager = MiniRecorderShortcutManager(whisperState: whisperState)
-    }
-    
-    func startHotkeyMonitoring() {
-        setupHotkeyMonitoring()
+        
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            self.setupHotkeyMonitoring()
+        }
     }
     
     private func setupHotkeyMonitoring() {
