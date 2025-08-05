@@ -21,7 +21,7 @@ IDENTITY_LINE=$(security find-identity -v -p codesigning | grep "$IDENTITY")
 echo "Using identity: $IDENTITY_LINE"
 
 # Remove existing accessibility permissions for the app's bundle identifier
-BUNDLE_ID="com.darknessest.VoiceInk"
+BUNDLE_ID="com.prakashjoshipax.VoiceInk"
 echo "Resetting Accessibility permissions for $BUNDLE_ID ..."
 tccutil reset Accessibility "$BUNDLE_ID"
 
