@@ -15,9 +15,10 @@ struct GeneralSettings: Codable {
     let recorderType: String?
     let isAudioCleanupEnabled: Bool?
     let audioRetentionPeriod: Int?
-    let isAutoCopyEnabled: Bool?
+
     let isSoundFeedbackEnabled: Bool?
     let isSystemMuteEnabled: Bool?
+    let isPauseMediaEnabled: Bool?
     let isTextFormattingEnabled: Bool?
 }
 
@@ -45,7 +46,7 @@ class ImportExportService {
     private let keyRecorderType = "RecorderType"
     private let keyIsAudioCleanupEnabled = "IsAudioCleanupEnabled"
     private let keyAudioRetentionPeriod = "AudioRetentionPeriod"
-    private let keyIsAutoCopyEnabled = "IsAutoCopyEnabled"
+
     private let keyIsSoundFeedbackEnabled = "isSoundFeedbackEnabled"
     private let keyIsSystemMuteEnabled = "isSystemMuteEnabled"
     private let keyIsTextFormattingEnabled = "IsTextFormattingEnabled"
@@ -59,7 +60,7 @@ class ImportExportService {
     }
 
     @MainActor
-    func exportSettings(enhancementService: AIEnhancementService, whisperPrompt: WhisperPrompt, hotkeyManager: HotkeyManager, menuBarManager: MenuBarManager, mediaController: MediaController, soundManager: SoundManager, whisperState: WhisperState) {
+    func exportSettings(enhancementService: AIEnhancementService, whisperPrompt: WhisperPrompt, hotkeyManager: HotkeyManager, menuBarManager: MenuBarManager, mediaController: MediaController, playbackController: PlaybackController, soundManager: SoundManager, whisperState: WhisperState) {
         let powerModeManager = PowerModeManager.shared
         let emojiManager = EmojiManager.shared
 
@@ -90,9 +91,10 @@ class ImportExportService {
             recorderType: whisperState.recorderType,
             isAudioCleanupEnabled: UserDefaults.standard.bool(forKey: keyIsAudioCleanupEnabled),
             audioRetentionPeriod: UserDefaults.standard.integer(forKey: keyAudioRetentionPeriod),
-            isAutoCopyEnabled: whisperState.isAutoCopyEnabled,
+
             isSoundFeedbackEnabled: soundManager.isEnabled,
             isSystemMuteEnabled: mediaController.isSystemMuteEnabled,
+            isPauseMediaEnabled: playbackController.isPauseMediaEnabled,
             isTextFormattingEnabled: UserDefaults.standard.object(forKey: keyIsTextFormattingEnabled) as? Bool ?? true
         )
 
@@ -140,7 +142,7 @@ class ImportExportService {
     }
 
     @MainActor
-    func importSettings(enhancementService: AIEnhancementService, whisperPrompt: WhisperPrompt, hotkeyManager: HotkeyManager, menuBarManager: MenuBarManager, mediaController: MediaController, soundManager: SoundManager, whisperState: WhisperState) {
+    func importSettings(enhancementService: AIEnhancementService, whisperPrompt: WhisperPrompt, hotkeyManager: HotkeyManager, menuBarManager: MenuBarManager, mediaController: MediaController, playbackController: PlaybackController, soundManager: SoundManager, whisperState: WhisperState) {
         let openPanel = NSOpenPanel()
         openPanel.allowedContentTypes = [UTType.json]
         openPanel.canChooseFiles = true
@@ -239,14 +241,15 @@ class ImportExportService {
                         if let audioRetention = general.audioRetentionPeriod {
                             UserDefaults.standard.set(audioRetention, forKey: self.keyAudioRetentionPeriod)
                         }
-                        if let autoCopy = general.isAutoCopyEnabled {
-                            whisperState.isAutoCopyEnabled = autoCopy
-                        }
+
                         if let soundFeedback = general.isSoundFeedbackEnabled {
                             soundManager.isEnabled = soundFeedback
                         }
                         if let muteSystem = general.isSystemMuteEnabled {
                             mediaController.isSystemMuteEnabled = muteSystem
+                        }
+                        if let pauseMedia = general.isPauseMediaEnabled {
+                            playbackController.isPauseMediaEnabled = pauseMedia
                         }
                         if let textFormattingEnabled = general.isTextFormattingEnabled {
                             UserDefaults.standard.set(textFormattingEnabled, forKey: self.keyIsTextFormattingEnabled)

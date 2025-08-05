@@ -11,6 +11,7 @@ class Recorder: ObservableObject {
     private var deviceObserver: NSObjectProtocol?
     private var isReconfiguring = false
     private let mediaController = MediaController.shared
+    private let playbackController = PlaybackController.shared
     @Published var audioMeter = AudioMeter(averagePower: 0, peakPower: 0)
     private var audioLevelCheckTask: Task<Void, Never>?
     private var hasDetectedAudioInCurrentSession = false
@@ -75,6 +76,7 @@ class Recorder: ObservableObject {
         hasDetectedAudioInCurrentSession = false
         
         Task { 
+            await playbackController.pauseMedia()
             await mediaController.muteSystemAudio()
         }
         
@@ -116,7 +118,7 @@ class Recorder: ObservableObject {
             }
             
             audioLevelCheckTask = Task {
-                let notificationChecks: [TimeInterval] = [2.0, 8.0]
+                let notificationChecks: [TimeInterval] = [5.0, 12.0]
 
                 for delay in notificationChecks {
                     try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
@@ -148,8 +150,11 @@ class Recorder: ObservableObject {
         recorder?.stop()
         recorder = nil
         audioMeter = AudioMeter(averagePower: 0, peakPower: 0)
+        
         Task {
+            // Complete system audio operations first
             await mediaController.unmuteSystemAudio()
+            await playbackController.resumeMedia()
         }
         deviceManager.isRecordingActive = false
     }

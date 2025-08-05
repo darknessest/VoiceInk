@@ -118,18 +118,6 @@ struct MenuBarView: View {
             
             Menu("Additional") {
                 Button {
-                    whisperState.isAutoCopyEnabled.toggle()
-                } label: {
-                    HStack {
-                        Text("Auto-copy to Clipboard")
-                        Spacer()
-                        if whisperState.isAutoCopyEnabled {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-                
-                Button {
                     SoundManager.shared.isEnabled.toggle()
                     menuRefreshTrigger.toggle()
                 } label: {
@@ -158,6 +146,10 @@ struct MenuBarView: View {
             .id("additional-menu-\(menuRefreshTrigger)")
             
             Divider()
+            
+            Button("Copy Last Transcription") {
+                LastTranscriptionService.copyLastTranscription(from: whisperState.modelContext)
+            }
             
             Button("History") {
                 menuBarManager.openMainWindowAndNavigate(to: "History")
