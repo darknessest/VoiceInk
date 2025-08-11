@@ -3,24 +3,32 @@
     <channel>
         <title>VoiceInk Releases</title>
         <item>
-            <title>1.44</title>
-            <pubDate>Sat, 2 Aug 2025 12:20:00 +0545</pubDate>
-            <sparkle:version>144</sparkle:version>
-            <sparkle:shortVersionString>1.44</sparkle:shortVersionString>
+            <title>1.49</title>
+            <pubDate>Sat, 8 Aug 2025 12:20:00 +0545</pubDate>
+            <sparkle:version>149</sparkle:version>
+            <sparkle:shortVersionString>1.49</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <description><![CDATA[
-                <h3>What's New in Version 1.44 🚀⚡</h3>
-                            <ul>
-                              <li>Added support for parakeet model</li>
-                              <li>Support playing or pausing media during recording</li>
-                              <li>Added Gemini-2.5-flash-lite model</li>
-                              <li>New sound for recording start and recording stop</li>
-                              <li>Edit word replacement options</li>
-                              <li>More reliable and better working default prompt for AI enhancement</li>
-                              <li>Minor fixes and improvements</li>
-                            </ul> 
+
+                <h3>What's New in Version 1.49 🚀</h3>
+                <ul>
+                    <li>User configurable shortcut for pasting last transcript</li>
+                    <li>Removed animation from recorder view/ made it bigger</li>
+                    <li>Added gpt-5 models</li>
+                </ul> 
+
+                     <h3>What's New in Version 1.47 🚀⚡</h3>
+                <ul>
+                    <li>Revamped the Power Mode Feature</li>
+                    <li>Added gpt-oss-120 model from cerebras</li>
+                    <li>Paste last transcript at current cursor position(CTRL + V)</li>
+                    <li>Better handling for pause media during recording functionality</li>
+                    <li>Improved the default enhancement prompts</li>
+                    <li>No history/data retention feature</li>
+                </ul> 
+                            
             ]]></description>
-           <enclosure url="https://github.com/Beingpax/VoiceInk/releases/download/v1.44/VoiceInk.dmg" length="9088616" type="application/octet-stream" sparkle:edSignature="LrNVdPRyIer6kON1JWC95Tf5/IFZjp9oOluJKAfubfadra7WOveGL8rSii0J0N1dvmJbR3sd2UgQmLBspdguBg=="/>
+           <enclosure url="https://github.com/Beingpax/VoiceInk/releases/download/v1.49/VoiceInk.dmg" length="9100166" type="application/octet-stream" sparkle:edSignature="nAV8IS6wNJTNwQxo/24SWND5x2xu7f1K8uV/A+3o/tR02d0JS2S9ffWnwlvZjeGDnK54IbaO0PRcYxm4TJBjBg=="/>
         </item>
     </channel>
 </rss>
