@@ -13,17 +13,17 @@ import os
 /// Fallback implementation that simply throws an unsupported-OS error so the rest of the
 /// application can be compiled and run on current macOS versions.
 class NativeAppleTranscriptionService: TranscriptionService {
-    enum ServiceError: Error, LocalizedError {
-        case unsupportedOS
+	enum ServiceError: Error, LocalizedError {
+		case unsupportedOS
 
-        var errorDescription: String? {
-            "Native Apple SpeechTranscriber API is not available in this macOS SDK yet."
-        }
-    }
+		var errorDescription: String? {
+			"Native Apple SpeechTranscriber API is not available in this macOS SDK yet."
+		}
+	}
 
-    func transcribe(audioURL: URL, model: any TranscriptionModel) async throws -> String {
-        throw ServiceError.unsupportedOS
-    }
+	func transcribe(audioURL: URL, model: any TranscriptionModel) async throws -> String {
+		throw ServiceError.unsupportedOS
+	}
 }
 
 #endif // canImport(SpeechTranscriber) 
