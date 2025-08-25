@@ -61,6 +61,7 @@ class AIEnhancementService: ObservableObject {
     
     private let aiService: AIService
     private let screenCaptureService: ScreenCaptureService
+    private let dictionaryContextService: DictionaryContextService
     private let baseTimeout: TimeInterval = 30
     private let rateLimitInterval: TimeInterval = 1.0
     private var lastRequestTime: Date?
@@ -70,6 +71,7 @@ class AIEnhancementService: ObservableObject {
         self.aiService = aiService
         self.modelContext = modelContext
         self.screenCaptureService = ScreenCaptureService()
+        self.dictionaryContextService = DictionaryContextService.shared
         
         self.isEnhancementEnabled = UserDefaults.standard.bool(forKey: "isAIEnhancementEnabled")
         self.useClipboardContext = UserDefaults.standard.bool(forKey: "useClipboardContext")
@@ -134,8 +136,13 @@ class AIEnhancementService: ObservableObject {
            let selectedText = selectedText, !selectedText.isEmpty {
             
             let selectedTextContext = "\n\nSelected Text: \(selectedText)"
-            let contextSection = "\n\n<CONTEXT_INFORMATION>\(selectedTextContext)\n</CONTEXT_INFORMATION>"
-            return activePrompt.promptText + contextSection
+            let generalContextSection = "\n\n<CONTEXT_INFORMATION>\(selectedTextContext)\n</CONTEXT_INFORMATION>"
+            let dictionaryContextSection = if !dictionaryContextService.getDictionaryContext().isEmpty {
+                "\n\n<DICTIONARY_CONTEXT>\(dictionaryContextService.getDictionaryContext())\n</DICTIONARY_CONTEXT>"
+            } else {
+                ""
+            }
+            return activePrompt.promptText + generalContextSection + dictionaryContextSection
         }
         
         let clipboardContext = if useClipboardContext,
@@ -154,28 +161,35 @@ class AIEnhancementService: ObservableObject {
             ""
         }
         
-        let contextSection = if !clipboardContext.isEmpty || !screenCaptureContext.isEmpty {
+        let dictionaryContext = dictionaryContextService.getDictionaryContext()
+        
+        let generalContextSection = if !clipboardContext.isEmpty || !screenCaptureContext.isEmpty {
             "\n\n<CONTEXT_INFORMATION>\(clipboardContext)\(screenCaptureContext)\n</CONTEXT_INFORMATION>"
         } else {
             ""
         }
         
+        let dictionaryContextSection = if !dictionaryContext.isEmpty {
+            "\n\n<DICTIONARY_CONTEXT>\(dictionaryContext)\n</DICTIONARY_CONTEXT>"
+        } else {
+            ""
+        }
+        
         guard let activePrompt = activePrompt else {
-            // Use default prompt when none is selected
             if let defaultPrompt = allPrompts.first(where: { $0.id == PredefinedPrompts.defaultPromptId }) {
                 var systemMessage = String(format: AIPrompts.customPromptTemplate, defaultPrompt.promptText)
-                systemMessage += contextSection
+                systemMessage += generalContextSection + dictionaryContextSection
                 return systemMessage
             }
-            return AIPrompts.assistantMode + contextSection
+            return AIPrompts.assistantMode + generalContextSection + dictionaryContextSection
         }
         
         if activePrompt.id == PredefinedPrompts.assistantPromptId {
-            return activePrompt.promptText + contextSection
+            return activePrompt.promptText + generalContextSection + dictionaryContextSection
         }
         
         var systemMessage = String(format: AIPrompts.customPromptTemplate, activePrompt.promptText)
-        systemMessage += contextSection
+        systemMessage += generalContextSection + dictionaryContextSection
         return systemMessage
     }
     
