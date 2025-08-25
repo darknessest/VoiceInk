@@ -252,7 +252,7 @@
 				E1ADD45D2CC544F100303ECB /* XCRemoteSwiftPackageReference "Sparkle" */,
 				E1D7EF972E35E16C00640029 /* XCRemoteSwiftPackageReference "mediaremote-adapter" */,
 				E1ECEC142E44590200DFFBA8 /* XCRemoteSwiftPackageReference "Zip" */,
-				E1C550862E5C391D00823A34 /* XCLocalSwiftPackageReference "../FluidAudio" */,
+				E1C550862E5C391D00823A34 /* XCRemoteSwiftPackageReference "FluidAudio" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E11473B12CBE0F0A00318EE4 /* Products */;
@@ -625,9 +625,13 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		E1C550862E5C391D00823A34 /* XCLocalSwiftPackageReference "../FluidAudio" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../FluidAudio;
+		E1C550862E5C391D00823A34 /* XCRemoteSwiftPackageReference "FluidAudio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/FluidInference/FluidAudio";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -692,6 +696,7 @@
 		};
 		E1C550872E5C391D00823A34 /* FluidAudio */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = E1C550862E5C391D00823A34 /* XCRemoteSwiftPackageReference "FluidAudio" */;
 			productName = FluidAudio;
 		};
 		E1D7EF982E35E16C00640029 /* MediaRemoteAdapter */ = {
