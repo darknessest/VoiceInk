@@ -50,6 +50,7 @@ jobs:
             brew-${{ runner.os }}-
       
       - name: List available Xcode versions
+        if: steps.cache-whispercpp.outputs.cache-hit != 'true'
         run: ls /Applications | grep Xcode
 
       - name: Select Xcode
