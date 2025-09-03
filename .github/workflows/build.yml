@@ -54,7 +54,7 @@ jobs:
       #   run: sudo xcode-select -switch "/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
 
       - name: Install dependencies
-        run: brew install ccache libomp openblas create-dmg --formula
+        run: brew install cmake ccache libomp openblas create-dmg --formula
         if: steps.cache-whispercpp.outputs.cache-hit != 'true'
 
       - name: Build whisper.cpp for macOS arm64
