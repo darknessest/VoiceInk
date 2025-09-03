@@ -1,5 +1,9 @@
 name: Build VoiceInk
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ main, develop ]
@@ -14,7 +18,7 @@ on:
   workflow_dispatch:
 
 env:
-  XCODE_VERSION: '16.2'
+  XCODE_VERSION: '16.4'
 
 jobs:
   build-whispercpp:
@@ -99,8 +103,8 @@ jobs:
           echo "Listing contents of whisper.cpp/build-apple:"
           ls -lR whisper.cpp/build-apple
 
-      # - name: Select Xcode
-      #   run: sudo xcode-select -switch "/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
+      - name: Select Xcode
+        run: sudo xcode-select -switch "/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
 
       - name: Install dependencies
         run: |
