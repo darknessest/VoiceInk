@@ -49,14 +49,12 @@ jobs:
           restore-keys: |
             brew-${{ runner.os }}-
       
-      - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        if: steps.cache-whispercpp.outputs.cache-hit != 'true'
-        with:
-          xcode-version: ${{ env.XCODE_VERSION }}
+      # - name: Select Xcode
+      #   if: steps.cache-whispercpp.outputs.cache-hit != 'true'
+      #   run: sudo xcode-select -switch "/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
 
       - name: Install dependencies
-        run: brew install cmake ccache libomp openblas create-dmg --formula
+        run: brew install ccache libomp openblas create-dmg --formula
         if: steps.cache-whispercpp.outputs.cache-hit != 'true'
 
       - name: Build whisper.cpp for macOS arm64
@@ -97,10 +95,8 @@ jobs:
           echo "Listing contents of whisper.cpp/build-apple:"
           ls -lR whisper.cpp/build-apple
 
-      - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: ${{ env.XCODE_VERSION }}
+      # - name: Select Xcode
+      #   run: sudo xcode-select -switch "/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
 
       - name: Install dependencies
         run: |
