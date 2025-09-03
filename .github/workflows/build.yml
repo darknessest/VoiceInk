@@ -54,7 +54,11 @@ jobs:
       #   run: sudo xcode-select -switch "/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
 
       - name: Install dependencies
-        run: brew install cmake ccache libomp openblas create-dmg --formula
+        run: |
+          for f in cmake ccache libomp openblas create-dmg; do
+            brew uninstall --ignore-dependencies --force "$f" 2>/dev/null || true
+            brew install --formula "$f"
+          done
         if: steps.cache-whispercpp.outputs.cache-hit != 'true'
 
       - name: Build whisper.cpp for macOS arm64
@@ -100,7 +104,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew install create-dmg
+          brew uninstall --ignore-dependencies --force create-dmg 2>/dev/null || true
+          brew install --formula create-dmg
         
       - name: Show tool versions
         run: |
