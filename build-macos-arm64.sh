@@ -40,8 +40,24 @@ GGML_METAL_USE_BF16=ON
 GGML_BLAS=ON
 GGML_OPENMP=ON
 
+# Base compiler flags
 COMMON_C_FLAGS="-Wno-macro-redefined -Wno-shorten-64-to-32 -Wno-unused-command-line-argument -g"
 COMMON_CXX_FLAGS="-Wno-macro-redefined -Wno-shorten-64-to-32 -Wno-unused-command-line-argument -g"
+
+# On some GitHub macOS runners, the compiler defines __ARM_FEATURE_MATMUL_INT8
+# while the selected arch flags do not enable i8mm, which breaks inlining.
+# Disable that macro in CI by default, unless VOICEINK_ENABLE_I8MM=1 is set.
+if [[ -n "${GITHUB_ACTIONS}" && "${VOICEINK_ENABLE_I8MM}" != "1" ]]; then
+    COMMON_C_FLAGS+=" -U__ARM_FEATURE_MATMUL_INT8"
+    COMMON_CXX_FLAGS+=" -U__ARM_FEATURE_MATMUL_INT8"
+fi
+
+# Provide a consistent baseline when cross-compiling on Intel runners
+EXTRA_CMAKE_ARGS=()
+if [[ "$(uname -m)" != "arm64" && "${VOICEINK_DISABLE_CROSS_BASELINE}" != "1" ]]; then
+    echo "📐 Cross-compiling detected (host $(uname -m) -> target arm64). Forcing GGML ARM baseline to armv8.2-a+dotprod (no i8mm)."
+    EXTRA_CMAKE_ARGS+=( -DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod )
+fi
 
 COMMON_CMAKE_ARGS=(
     -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO
@@ -199,6 +215,7 @@ embed_libomp() {
 echo "🔨 Configuring CMake (Xcode generator)..."
 cmake -B build-macos -G Xcode \
     "${COMMON_CMAKE_ARGS[@]}" \
+    "${EXTRA_CMAKE_ARGS[@]}" \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOS_MIN_OS_VERSION} \
     -DCMAKE_OSX_ARCHITECTURES="arm64" \
     -DCMAKE_C_FLAGS="${COMMON_C_FLAGS}" \
