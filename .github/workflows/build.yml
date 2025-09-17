@@ -18,11 +18,11 @@ on:
   workflow_dispatch:
 
 env:
-  XCODE_VERSION: '16.4'
+  XCODE_VERSION: '26.0'
 
 jobs:
   build-whispercpp:
-    runs-on: macos-15
+    runs-on: macos-26
     outputs:
       whispercpp_sha: ${{ steps.get-whispercpp-sha.outputs.whispercpp_sha }}
     steps:
@@ -79,7 +79,7 @@ jobs:
           path: build-apple.tar.gz
 
   build-app:
-    runs-on: macos-15
+    runs-on: macos-26
     needs: build-whispercpp
     steps:
       - name: Checkout repository
