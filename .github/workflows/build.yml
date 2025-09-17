@@ -31,6 +31,17 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Log hardware information
+        run: |
+          echo "=== Hardware Information ==="
+          echo "Runner OS: $RUNNER_OS"
+          echo "System architecture: $(uname -m)"
+          echo "CPU brand: $(sysctl -n machdep.cpu.brand_string 2>/dev/null || echo 'Not available')"
+          echo "CPU cores: $(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 'Not available')"
+          echo "Memory: $(sysctl -n hw.memsize 2>/dev/null | awk '{print $0/1024/1024/1024 "GB"}' || echo 'Not available')"
+          echo "Model: $(sysctl -n hw.model 2>/dev/null || echo 'Not available')"
+          echo "============================"
+
       - name: Get whisper.cpp submodule commit
         id: get-whispercpp-sha
         run: echo "whispercpp_sha=$(git submodule status whisper.cpp | awk '{print $1}')" >> $GITHUB_OUTPUT
