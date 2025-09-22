@@ -100,7 +100,7 @@ jobs:
       matrix:
         include:
           - os: macos-15
-            xcode_version: '15.4'
+            xcode_version: '16.4'
           - os: macos-26
             xcode_version: '26.0'
     runs-on: ${{ matrix.os }}
