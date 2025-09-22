@@ -23,7 +23,7 @@ jobs:
       matrix:
         include:
           - os: macos-15
-            xcode_version: '15.4'
+            xcode_version: '16.4'
           - os: macos-26
             xcode_version: '26.0'
     runs-on: ${{ matrix.os }}
@@ -177,19 +177,23 @@ jobs:
       - name: Create DMG from .app
         if: github.event_name == 'release'
         run: |
+          # Extract OS version number from matrix.os (macos-15 -> 15, macos-26 -> 26)
+          OS_VERSION=$(echo "${{ matrix.os }}" | sed 's/macos-//')
+          DMG_NAME="VoiceInk-macos${OS_VERSION}.dmg"
+
           create-dmg \
-            --volname "VoiceInk" \
+            --volname "VoiceInk-macOS-${OS_VERSION}" \
             --window-pos 200 120 \
             --window-size 800 400 \
             --icon-size 100 \
             --app-drop-link 600 185 \
-            build/Build/Products/Release/VoiceInk.dmg \
+            "build/Build/Products/Release/${DMG_NAME}" \
             build/Build/Products/Release/VoiceInk.app
 
       - name: Upload Release DMG
         uses: softprops/action-gh-release@v2
         if: github.event_name == 'release'
         with:
-          files: build/Build/Products/Release/VoiceInk*.dmg
+          files: build/Build/Products/Release/VoiceInk-macos*.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
