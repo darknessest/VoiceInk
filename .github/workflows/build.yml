@@ -17,12 +17,18 @@ on:
     types: [published]
   workflow_dispatch:
 
-env:
-  XCODE_VERSION: '26.0'
-
 jobs:
   build-whispercpp:
-    runs-on: macos-26
+    strategy:
+      matrix:
+        include:
+          - os: macos-15
+            xcode_version: '15.4'
+          - os: macos-26
+            xcode_version: '26.0'
+    runs-on: ${{ matrix.os }}
+    env:
+      XCODE_VERSION: ${{ matrix.xcode_version }}
     outputs:
       whispercpp_sha: ${{ steps.get-whispercpp-sha.outputs.whispercpp_sha }}
     steps:
@@ -51,7 +57,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: whisper.cpp/build-apple
-          key: whispercpp-build-${{ steps.get-whispercpp-sha.outputs.whispercpp_sha }}
+          key: whispercpp-build-${{ matrix.os }}-${{ steps.get-whispercpp-sha.outputs.whispercpp_sha }}
 
       - name: Cache Homebrew
         uses: actions/cache@v4
@@ -60,9 +66,9 @@ jobs:
           path: |
             ~/Library/Caches/Homebrew
             /usr/local/Homebrew/Library/Taps
-          key: brew-${{ runner.os }}-${{ hashFiles('.github/workflows/build.yml') }}
+          key: brew-${{ matrix.os }}-${{ hashFiles('.github/workflows/build.yml') }}
           restore-keys: |
-            brew-${{ runner.os }}-
+            brew-${{ matrix.os }}-
       
       - name: List available Xcode versions
         if: steps.cache-whispercpp.outputs.cache-hit != 'true'
@@ -86,11 +92,20 @@ jobs:
       - name: Upload packaged whisper.cpp build
         uses: actions/upload-artifact@v4
         with:
-          name: whisper-build-${{ steps.get-whispercpp-sha.outputs.whispercpp_sha }}
+          name: whisper-build-${{ matrix.os }}-${{ steps.get-whispercpp-sha.outputs.whispercpp_sha }}
           path: build-apple.tar.gz
 
   build-app:
-    runs-on: macos-26
+    strategy:
+      matrix:
+        include:
+          - os: macos-15
+            xcode_version: '15.4'
+          - os: macos-26
+            xcode_version: '26.0'
+    runs-on: ${{ matrix.os }}
+    env:
+      XCODE_VERSION: ${{ matrix.xcode_version }}
     needs: build-whispercpp
     steps:
       - name: Checkout repository
@@ -101,7 +116,7 @@ jobs:
       - name: Download whisper.cpp build artifact
         uses: actions/download-artifact@v4
         with:
-          name: whisper-build-${{ needs.build-whispercpp.outputs.whispercpp_sha }}
+          name: whisper-build-${{ matrix.os }}-${{ needs.build-whispercpp.outputs.whispercpp_sha }}
           path: .
 
       - name: Extract whisper.cpp build
@@ -142,9 +157,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build
-          key: deriveddata-${{ runner.os }}-${{ github.sha }}
+          key: deriveddata-${{ matrix.os }}-${{ github.sha }}
           restore-keys: |
-            deriveddata-${{ runner.os }}-
+            deriveddata-${{ matrix.os }}-
 
       - name: Build VoiceInk
         run: |
