@@ -1,4 +1,6 @@
 name: Build VoiceInk
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
