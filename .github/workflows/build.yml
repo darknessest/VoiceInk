@@ -1,7 +1,7 @@
 name: Build VoiceInk
 
 permissions:
-  contents: read
+  contents: write
   actions: write
 
 concurrency:
