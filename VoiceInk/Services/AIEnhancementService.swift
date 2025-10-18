@@ -9,7 +9,7 @@ enum EnhancementPrompt {
 }
 
 class AIEnhancementService: ObservableObject {
-    private let logger = Logger(subsystem: "com.voiceink.enhancement", category: "AIEnhancementService")
+    private let logger = Logger(subsystem: "com.prakashjoshipax.voiceink", category: "AIEnhancementService")
 
     @Published var isEnhancementEnabled: Bool {
         didSet {
@@ -69,6 +69,8 @@ class AIEnhancementService: ObservableObject {
     private let rateLimitInterval: TimeInterval = 1.0
     private var lastRequestTime: Date?
     private let modelContext: ModelContext
+    
+    @Published var lastCapturedClipboard: String?
 
     init(aiService: AIService = AIService(), modelContext: ModelContext) {
         self.aiService = aiService
@@ -137,25 +139,16 @@ class AIEnhancementService: ObservableObject {
     }
 
     private func getSystemMessage(for mode: EnhancementPrompt) -> String {
-        let clipboardSnapshot = NSPasteboard.general.string(forType: .string)
         let selectedText = SelectedTextService.fetchSelectedText()
 
-        if let activePrompt = activePrompt,
-           activePrompt.id == PredefinedPrompts.assistantPromptId,
-           let selectedText = selectedText, !selectedText.isEmpty {
-
-            let selectedTextContext = "\n\nSelected Text: \(selectedText)"
-            let generalContextSection = "\n\n<CONTEXT_INFORMATION>\(selectedTextContext)\n</CONTEXT_INFORMATION>"
-            let dictionaryContextSection = if !dictionaryContextService.getDictionaryContext().isEmpty {
-                "\n\n<DICTIONARY_CONTEXT>\(dictionaryContextService.getDictionaryContext())\n</DICTIONARY_CONTEXT>"
-            } else {
-                ""
-            }
-            return activePrompt.promptText + generalContextSection + dictionaryContextSection
+        let selectedTextContext = if let selectedText = selectedText, !selectedText.isEmpty {
+            "\n\n<CURRENTLY_SELECTED_TEXT>\n\(selectedText)\n</CURRENTLY_SELECTED_TEXT>"
+        } else {
+            ""
         }
 
         let clipboardContext = if useClipboardContext,
-                              let clipboardText = clipboardSnapshot ?? NSPasteboard.general.string(forType: .string),
+                              let clipboardText = lastCapturedClipboard,
                               !clipboardText.isEmpty {
             "\n\n<CLIPBOARD_CONTEXT>\n\(clipboardText)\n</CLIPBOARD_CONTEXT>"
         } else {
@@ -165,18 +158,14 @@ class AIEnhancementService: ObservableObject {
         let screenCaptureContext = if useScreenCaptureContext,
                                    let capturedText = screenCaptureService.lastCapturedText,
                                    !capturedText.isEmpty {
-            "\n\nActive Window Context: \(capturedText)"
+            "\n\n<CURRENT_WINDOW_CONTEXT>\n\(capturedText)\n</CURRENT_WINDOW_CONTEXT>"
         } else {
             ""
         }
 
         let dictionaryContext = dictionaryContextService.getDictionaryContext()
 
-        let generalContextSection = if !clipboardContext.isEmpty || !screenCaptureContext.isEmpty {
-            "\n\n<CONTEXT_INFORMATION>\(clipboardContext)\(screenCaptureContext)\n</CONTEXT_INFORMATION>"
-        } else {
-            ""
-        }
+        let allContextSections = selectedTextContext + clipboardContext + screenCaptureContext
 
         let dictionaryContextSection = if !dictionaryContext.isEmpty {
             "\n\n<DICTIONARY_CONTEXT>\(dictionaryContext)\n</DICTIONARY_CONTEXT>"
@@ -184,22 +173,18 @@ class AIEnhancementService: ObservableObject {
             ""
         }
 
-        guard let activePrompt = activePrompt else {
-            if let defaultPrompt = allPrompts.first(where: { $0.id == PredefinedPrompts.defaultPromptId }) {
-                var systemMessage = defaultPrompt.finalPromptText
-                systemMessage += generalContextSection + dictionaryContextSection
-                return systemMessage
-            }
-            return AIPrompts.assistantMode + generalContextSection + dictionaryContextSection
-        }
+        let finalContextSection = allContextSections + dictionaryContextSection
 
-        if activePrompt.id == PredefinedPrompts.assistantPromptId {
-            return activePrompt.promptText + generalContextSection + dictionaryContextSection
+        if let activePrompt = activePrompt {
+            if activePrompt.id == PredefinedPrompts.assistantPromptId {
+                return activePrompt.promptText + finalContextSection
+            } else {
+                return activePrompt.finalPromptText + finalContextSection
+            }
+        } else {
+            let defaultPrompt = allPrompts.first(where: { $0.id == PredefinedPrompts.defaultPromptId }) ?? allPrompts.first!
+            return defaultPrompt.finalPromptText + finalContextSection
         }
-        
-        var systemMessage = activePrompt.finalPromptText
-        systemMessage += generalContextSection + dictionaryContextSection
-        return systemMessage
     }
 
     private func makeRequest(text: String, mode: EnhancementPrompt) async throws -> String {
@@ -413,13 +398,20 @@ class AIEnhancementService: ObservableObject {
     }
 
     func captureScreenContext() async {
-        guard useScreenCaptureContext else { return }
-
         if let capturedText = await screenCaptureService.captureAndExtractText() {
             await MainActor.run {
                 self.objectWillChange.send()
             }
         }
+    }
+    
+    func captureClipboardContext() {
+        lastCapturedClipboard = NSPasteboard.general.string(forType: .string)
+    }
+    
+    func clearCapturedContexts() {
+        lastCapturedClipboard = nil
+        screenCaptureService.lastCapturedText = nil
     }
 
     func addPrompt(title: String, promptText: String, icon: PromptIcon = .documentFill, description: String? = nil, triggerWords: [String] = [], useSystemInstructions: Bool = true) {

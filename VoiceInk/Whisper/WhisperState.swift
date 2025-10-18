@@ -59,7 +59,7 @@ class WhisperState: NSObject, ObservableObject {
     private var localTranscriptionService: LocalTranscriptionService!
     private lazy var cloudTranscriptionService = CloudTranscriptionService()
     private lazy var nativeAppleTranscriptionService = NativeAppleTranscriptionService()
-    private lazy var parakeetTranscriptionService = ParakeetTranscriptionService(customModelsDirectory: parakeetModelsDirectory)
+    internal lazy var parakeetTranscriptionService = ParakeetTranscriptionService(customModelsDirectory: parakeetModelsDirectory)
     
     private var modelUrl: URL? {
         let possibleURLs = [
@@ -200,12 +200,12 @@ class WhisperState: NSObject, ObservableObject {
                                         self.logger.error("❌ Model loading failed: \(error.localizedDescription)")
                                     }
                                 }
-                                    } else if let model = self.currentTranscriptionModel, model.provider == .parakeet {
-            try? await parakeetTranscriptionService.loadModel()
+                            } else if let model = self.currentTranscriptionModel, model.provider == .parakeet {
+                                try? await self.parakeetTranscriptionService.loadModel()
                             }
         
-                            if let enhancementService = self.enhancementService,
-                               enhancementService.useScreenCaptureContext {
+                            if let enhancementService = self.enhancementService {
+                                enhancementService.captureClipboardContext()
                                 await enhancementService.captureScreenContext()
                             }
         
@@ -351,12 +351,8 @@ class WhisperState: NSObject, ObservableObject {
                     finalPastedText = enhancedText
                 } catch {
                     transcription.enhancedText = "Enhancement failed: \(error)"
-                    await MainActor.run {
-                        NotificationManager.shared.showNotification(
-                            title: "AI enhancement failed",
-                            type: .error
-                        )
-                    }
+                  
+                    if await checkCancellationAndCleanup() { return }
                 }
             }
 
@@ -373,8 +369,13 @@ class WhisperState: NSObject, ObservableObject {
 
         // --- Finalize and save ---
         try? modelContext.save()
-        NotificationCenter.default.post(name: .transcriptionCreated, object: transcription)
         
+        if transcription.transcriptionStatus == TranscriptionStatus.completed.rawValue {
+            NotificationCenter.default.post(name: .transcriptionCompleted, object: transcription)
+        }
+
+        if await checkCancellationAndCleanup() { return }
+
         if var textToPaste = finalPastedText, transcription.transcriptionStatus == TranscriptionStatus.completed.rawValue {
             if case .trialExpired = licenseViewModel.licenseState {
                 textToPaste = """
@@ -382,14 +383,12 @@ class WhisperState: NSObject, ObservableObject {
                     \n\(textToPaste)
                     """
             }
-            
+
             let shouldAddSpace = UserDefaults.standard.object(forKey: "AppendTrailingSpace") as? Bool ?? true
             if shouldAddSpace {
                 textToPaste += " "
             }
-            
-            if await checkCancellationAndCleanup() { return }
-            
+
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 CursorPaster.pasteAtCursor(textToPaste)
 
@@ -402,14 +401,16 @@ class WhisperState: NSObject, ObservableObject {
                 }
             }
         }
-        
+
         if let result = promptDetectionResult,
            let enhancementService = enhancementService,
            result.shouldEnableAI {
             await promptDetectionService.restoreOriginalSettings(result, to: enhancementService)
         }
-        
+
         await self.dismissMiniRecorder()
+
+        shouldCancelRecording = false
     }
 
     func getEnhancementService() -> AIEnhancementService? {
@@ -418,12 +419,12 @@ class WhisperState: NSObject, ObservableObject {
     
     private func checkCancellationAndCleanup() async -> Bool {
         if shouldCancelRecording {
-            await dismissMiniRecorder()
+            await cleanupModelResources()
             return true
         }
         return false
     }
-    
+
     private func cleanupAndDismiss() async {
         await dismissMiniRecorder()
     }
