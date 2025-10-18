@@ -1,18 +1,22 @@
 name: Build VoiceInk
 
+permissions:
+  contents: read
+  actions: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
   cancel-in-progress: true
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'VoiceInk.xcodeproj/**'
-      - 'whisper.cpp/**'
-      - '.github/workflows/build.yml'
+      - "VoiceInk.xcodeproj/**"
+      - "whisper.cpp/**"
+      - ".github/workflows/build.yml"
   pull_request:
-    branches: [ main ]
+    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
@@ -23,9 +27,9 @@ jobs:
       matrix:
         include:
           - os: macos-15
-            xcode_version: '26.0'
+            xcode_version: "26.0"
           - os: macos-26
-            xcode_version: '26.0'
+            xcode_version: "26.0"
     runs-on: ${{ matrix.os }}
     env:
       XCODE_VERSION: ${{ matrix.xcode_version }}
@@ -69,7 +73,7 @@ jobs:
           key: brew-${{ matrix.os }}-${{ hashFiles('.github/workflows/build.yml') }}
           restore-keys: |
             brew-${{ matrix.os }}-
-      
+
       - name: List available Xcode versions
         if: steps.cache-whispercpp.outputs.cache-hit != 'true'
         run: ls /Applications | grep Xcode
@@ -100,9 +104,9 @@ jobs:
       matrix:
         include:
           - os: macos-15
-            xcode_version: '26.0'
+            xcode_version: "26.0"
           - os: macos-26
-            xcode_version: '26.0'
+            xcode_version: "26.0"
     runs-on: ${{ matrix.os }}
     env:
       XCODE_VERSION: ${{ matrix.xcode_version }}
@@ -136,7 +140,7 @@ jobs:
         run: |
           brew uninstall --ignore-dependencies --force create-dmg 2>/dev/null || true
           brew install --formula create-dmg
-        
+
       - name: Show tool versions
         run: |
           xcodebuild -version
@@ -144,12 +148,12 @@ jobs:
           cmake --version
           echo "System architecture: $(uname -m)"
           sysctl -n machdep.cpu.brand_string
-      
+
       - name: Show whisper.cpp version
         run: |
           cd whisper.cpp
           git log --oneline -1
-        
+
       - name: List Xcode schemes
         run: xcodebuild -project VoiceInk.xcodeproj -list
 
