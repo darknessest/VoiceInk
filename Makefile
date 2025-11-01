@@ -1,6 +1,5 @@
-# Define a directory for dependencies in the user's home folder
-DEPS_DIR := $(HOME)/VoiceInk-Dependencies
-WHISPER_CPP_DIR := $(DEPS_DIR)/whisper.cpp
+# Define paths for whisper.cpp submodule
+WHISPER_CPP_DIR := whisper.cpp
 FRAMEWORK_PATH := $(WHISPER_CPP_DIR)/build-apple/whisper.xcframework
 
 .PHONY: all clean whisper setup build check healthcheck help dev run
@@ -23,22 +22,19 @@ healthcheck: check
 
 # Build process
 whisper:
-	@mkdir -p $(DEPS_DIR)
+	@if [ ! -d "$(WHISPER_CPP_DIR)" ]; then \
+		echo "Initializing whisper.cpp submodule..."; \
+		git submodule update --init --recursive; \
+	fi
 	@if [ ! -d "$(FRAMEWORK_PATH)" ]; then \
-		echo "Building whisper.xcframework in $(DEPS_DIR)..."; \
-		if [ ! -d "$(WHISPER_CPP_DIR)" ]; then \
-			git clone https://github.com/ggerganov/whisper.cpp.git $(WHISPER_CPP_DIR); \
-		else \
-			(cd $(WHISPER_CPP_DIR) && git pull); \
-		fi; \
+		echo "Building whisper.xcframework in $(WHISPER_CPP_DIR)..."; \
 		cd $(WHISPER_CPP_DIR) && ./build-xcframework.sh; \
 	else \
-		echo "whisper.xcframework already built in $(DEPS_DIR), skipping build"; \
+		echo "whisper.xcframework already built, skipping build"; \
 	fi
 
 setup: whisper
 	@echo "Whisper framework is ready at $(FRAMEWORK_PATH)"
-	@echo "Please ensure your Xcode project references the framework from this new location."
 
 build: setup
 	xcodebuild -project VoiceInk.xcodeproj -scheme VoiceInk -configuration Debug CODE_SIGN_IDENTITY="" build
@@ -58,18 +54,18 @@ run:
 # Cleanup
 clean:
 	@echo "Cleaning build artifacts..."
-	@rm -rf $(DEPS_DIR)
+	@rm -rf $(WHISPER_CPP_DIR)/build-apple
 	@echo "Clean complete"
 
 # Help
 help:
 	@echo "Available targets:"
 	@echo "  check/healthcheck  Check if required CLI tools are installed"
-	@echo "  whisper            Clone and build whisper.cpp XCFramework"
-	@echo "  setup              Copy whisper XCFramework to VoiceInk project"
+	@echo "  whisper            Initialize and build whisper.cpp XCFramework"
+	@echo "  setup              Ensure whisper XCFramework is ready"
 	@echo "  build              Build the VoiceInk Xcode project"
 	@echo "  run                Launch the built VoiceInk app"
 	@echo "  dev                Build and run the app (for development)"
 	@echo "  all                Run full build process (default)"
-	@echo "  clean              Remove build artifacts"
+	@echo "  clean              Remove whisper.cpp build artifacts"
 	@echo "  help               Show this help message"

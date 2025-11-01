@@ -53,9 +53,13 @@ cd ..
    - Add it manually in the "Frameworks, Libraries, and Embedded Content" section of project settings
 
 5. Build and Run
-   - **Option 1:** Use the provided build script:
+   - **Option 1:** Use the provided Makefile:
      ```bash
-     ./build.sh
+     make
+     ```
+     Or for development workflow:
+     ```bash
+     make dev
      ```
    - **Option 2:** Build manually using Xcode:
      - Build the project using Cmd+B or Product > Build
@@ -64,6 +68,19 @@ cd ..
      ```bash
      xcodebuild -project VoiceInk.xcodeproj -scheme VoiceInk -configuration Debug build
      ```
+
+### Makefile Targets
+
+The project includes a comprehensive Makefile with the following targets:
+
+- `make` or `make all`: Full build process (default)
+- `make check`: Verify prerequisites
+- `make whisper`: Initialize and build whisper.cpp
+- `make build`: Build the VoiceInk project
+- `make run`: Launch the built application
+- `make dev`: Build and run (development workflow)
+- `make clean`: Clean build artifacts
+- `make help`: Show available targets
 
 ## Automated Building with GitHub Actions
 
@@ -116,6 +133,6 @@ If you encounter any build issues:
 1. Check Xcode and macOS versions
 2. Verify all dependencies are properly installed
 3. Make sure whisper.xcframework is properly built and linked
-4. Try running the build script: `./build.sh`
+4. Try running: `make clean && make`
 
 For more help, please check the [issues](https://github.com/Beingpax/VoiceInk/issues) section or create a new issue. 
