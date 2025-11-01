@@ -37,7 +37,16 @@ setup: whisper
 	@echo "Whisper framework is ready at $(FRAMEWORK_PATH)"
 
 build: setup
-	xcodebuild -project VoiceInk.xcodeproj -scheme VoiceInk -configuration Debug CODE_SIGN_IDENTITY="" build
+	xcodebuild -project VoiceInk.xcodeproj \
+		-scheme VoiceInk \
+		-configuration Release \
+		-derivedDataPath build \
+		-destination 'platform=macOS,arch=arm64' \
+		CODE_SIGN_STYLE=Manual \
+		CODE_SIGNING_ALLOWED=NO \
+		CODE_SIGNING_REQUIRED=NO \
+		CODE_SIGN_IDENTITY="" \
+		build
 
 # Run application
 run:

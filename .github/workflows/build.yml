@@ -14,6 +14,7 @@ on:
     paths:
       - "VoiceInk.xcodeproj/**"
       - "whisper.cpp/**"
+      - "Makefile"
       - ".github/workflows/build.yml"
   pull_request:
     branches: [main]
@@ -88,7 +89,7 @@ jobs:
 
       - name: Build whisper.cpp for macOS arm64
         if: steps.cache-whispercpp.outputs.cache-hit != 'true'
-        run: bash build-macos-arm64.sh
+        run: make whisper
 
       - name: Package whisper.cpp build directory
         run: tar -C whisper.cpp -czf build-apple.tar.gz build-apple
@@ -166,17 +167,7 @@ jobs:
             deriveddata-${{ matrix.os }}-
 
       - name: Build VoiceInk
-        run: |
-          xcodebuild -project VoiceInk.xcodeproj \
-            -scheme VoiceInk \
-            -configuration Release \
-            -derivedDataPath build \
-            -destination 'platform=macOS,arch=arm64' \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            build
+        run: make build
 
       - name: Create DMG from .app
         if: github.event_name == 'release'
