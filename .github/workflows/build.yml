@@ -10,13 +10,13 @@ concurrency:
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
+      - "VoiceInk/**"
       - "VoiceInk.xcodeproj/**"
       - "whisper.cpp/**"
       - "Makefile"
       - "build-macos-arm64.sh"
-      - ".github/workflows/build.yml"
   pull_request:
     branches: [main]
   release:
