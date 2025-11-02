@@ -79,6 +79,21 @@ The project includes a comprehensive Makefile with the following targets:
 - `make clean`: Clean build artifacts
 - `make help`: Show available targets
 
+## Code Signing for Local Development
+
+For local development and testing, you can sign the built application using the provided script:
+
+```bash
+./sign-app-local.sh /path/to/VoiceInk.app
+```
+
+This script will:
+- Find an available code signing identity from your keychain
+- Sign the application bundle with proper entitlements
+- Reset accessibility permissions for the app
+
+**Note:** This is only needed for local testing when the app requires code signing (e.g., for certain system integrations).
+
 ## Automated Building with GitHub Actions
 
 The project includes a GitHub Actions workflow that automatically builds VoiceInk when changes are pushed to the repository.

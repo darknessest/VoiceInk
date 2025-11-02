@@ -16,6 +16,7 @@ on:
       - "whisper.cpp/**"
       - "Makefile"
       - "build-macos-arm64.sh"
+      - "sign-app-local.sh"
       - ".github/workflows/build.yml"
   pull_request:
     branches: [main]
