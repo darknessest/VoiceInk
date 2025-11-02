@@ -5,7 +5,7 @@ permissions:
   actions: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
+  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}-${{ github.event_name }}
   cancel-in-progress: true
 
 on:
@@ -15,6 +15,7 @@ on:
       - "VoiceInk.xcodeproj/**"
       - "whisper.cpp/**"
       - "Makefile"
+      - "build-macos-arm64.sh"
       - ".github/workflows/build.yml"
   pull_request:
     branches: [main]

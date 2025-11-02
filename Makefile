@@ -27,8 +27,8 @@ whisper:
 		git submodule update --init --recursive; \
 	fi
 	@if [ ! -d "$(FRAMEWORK_PATH)" ]; then \
-		echo "Building whisper.xcframework in $(WHISPER_CPP_DIR)..."; \
-		cd $(WHISPER_CPP_DIR) && ./build-xcframework.sh; \
+		echo "Building whisper.xcframework with performance optimizations..."; \
+		./build-macos-arm64.sh; \
 	else \
 		echo "whisper.xcframework already built, skipping build"; \
 	fi

@@ -21,12 +21,11 @@ whisper.cpp is included as a git submodule. After cloning the repository, you ne
 git submodule update --init --recursive
 ```
 
-2. Build whisper.cpp XCFramework:
+2. Build whisper.cpp XCFramework with performance optimizations:
 ```bash
-cd whisper.cpp
-./build-xcframework.sh
+make whisper
 ```
-This will create the XCFramework at `whisper.cpp/build-apple/whisper.xcframework`.
+This will create the XCFramework at `whisper.cpp/build-apple/whisper.xcframework` with Metal acceleration, BLAS, OpenMP, and other performance optimizations enabled.
 
 ## Building VoiceInk
 
@@ -41,11 +40,9 @@ cd VoiceInk
 git submodule update --init --recursive
 ```
 
-3. Build whisper.cpp (if not already done):
+3. Build whisper.cpp with performance optimizations (if not already done):
 ```bash
-cd whisper.cpp
-./build-xcframework.sh
-cd ..
+make whisper
 ```
 
 4. Add the whisper.xcframework to your project:
@@ -126,7 +123,7 @@ If you encounter any build issues:
 2. **Xcode build fails**: 
    - Clean the build folder (Cmd+Shift+K)
    - Clean the build cache (Cmd+Shift+K twice)
-3. **whisper.xcframework not found**: Ensure you've built whisper.cpp first using `./build-xcframework.sh` in the whisper.cpp directory
+3. **whisper.xcframework not found**: Ensure you've built whisper.cpp first using `make whisper`
 4. **Submodule issues**: Run `git submodule update --init --recursive`
 
 ### General Steps
