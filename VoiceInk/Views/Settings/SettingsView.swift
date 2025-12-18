@@ -11,6 +11,7 @@ struct SettingsView: View {
     @EnvironmentObject private var whisperState: WhisperState
     @EnvironmentObject private var enhancementService: AIEnhancementService
     @StateObject private var deviceManager = AudioDeviceManager.shared
+    @ObservedObject private var soundManager = SoundManager.shared
     @ObservedObject private var mediaController = MediaController.shared
     @ObservedObject private var playbackController = PlaybackController.shared
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
@@ -19,6 +20,7 @@ struct SettingsView: View {
     @State private var showResetOnboardingAlert = false
     @State private var currentShortcut = KeyboardShortcuts.getShortcut(for: .toggleMiniRecorder)
     @State private var isCustomCancelEnabled = false
+    @State private var isCustomSoundsExpanded = false
 
     
     var body: some View {
@@ -217,13 +219,38 @@ struct SettingsView: View {
                     subtitle: "Customize app & system feedback"
                 ) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Toggle(isOn: .init(
-                            get: { SoundManager.shared.isEnabled },
-                            set: { SoundManager.shared.isEnabled = $0 }
-                        )) {
-                            Text("Sound feedback")
+                        HStack {
+                            Toggle(isOn: $soundManager.isEnabled) {
+                                Text("Sound feedback")
+                            }
+                            .toggleStyle(.switch)
+
+                            if soundManager.isEnabled {
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .rotationEffect(.degrees(isCustomSoundsExpanded ? 90 : 0))
+                                    .animation(.easeInOut(duration: 0.2), value: isCustomSoundsExpanded)
+                            }
                         }
-                        .toggleStyle(.switch)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if soundManager.isEnabled {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    isCustomSoundsExpanded.toggle()
+                                }
+                            }
+                        }
+
+                        if soundManager.isEnabled && isCustomSoundsExpanded {
+                            CustomSoundSettingsView()
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                                .padding(.top, 4)
+                        }
+
+                        Divider()
 
                         Toggle(isOn: $mediaController.isSystemMuteEnabled) {
                             Text("Mute system audio during recording")
@@ -273,7 +300,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Select the method used to paste text. Use AppleScript if you have a non-standard keyboard layout.")
                             .settingsDescription()
-                        
+
                         Toggle("Use AppleScript Paste Method", isOn: Binding(
                             get: { UserDefaults.standard.bool(forKey: "UseAppleScriptPaste") },
                             set: { UserDefaults.standard.set($0, forKey: "UseAppleScriptPaste") }

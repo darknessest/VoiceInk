@@ -134,7 +134,7 @@ class AudioDeviceManager: ObservableObject {
         let devices = deviceIDs.compactMap { deviceID -> (id: AudioDeviceID, uid: String, name: String)? in
             guard let name = getDeviceName(deviceID: deviceID),
                   let uid = getDeviceUID(deviceID: deviceID),
-                  isInputDevice(deviceID: deviceID) else {
+                  isValidInputDevice(deviceID: deviceID) else {
                 return nil
             }
             return (id: deviceID, uid: uid, name: name)
@@ -162,13 +162,13 @@ class AudioDeviceManager: ObservableObject {
         return name as String?
     }
     
-    private func isInputDevice(deviceID: AudioDeviceID) -> Bool {
+    private func isValidInputDevice(deviceID: AudioDeviceID) -> Bool {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyStreamConfiguration,
             mScope: kAudioDevicePropertyScopeInput,
             mElement: kAudioObjectPropertyElementMain
         )
-        
+
         var propertySize: UInt32 = 0
         var result = AudioObjectGetPropertyDataSize(
             deviceID,
@@ -177,15 +177,15 @@ class AudioDeviceManager: ObservableObject {
             nil,
             &propertySize
         )
-        
+
         if result != noErr {
             logger.error("Error checking input capability for device \(deviceID): \(result)")
             return false
         }
-        
+
         let bufferList = UnsafeMutablePointer<AudioBufferList>.allocate(capacity: Int(propertySize))
         defer { bufferList.deallocate() }
-        
+
         result = AudioObjectGetPropertyData(
             deviceID,
             &address,
@@ -194,16 +194,16 @@ class AudioDeviceManager: ObservableObject {
             &propertySize,
             bufferList
         )
-        
+
         if result != noErr {
             logger.error("Error getting stream configuration for device \(deviceID): \(result)")
             return false
         }
-        
+
         let bufferCount = Int(bufferList.pointee.mNumberBuffers)
         return bufferCount > 0
     }
-    
+
     func selectDevice(id: AudioDeviceID) {
         logger.info("Selecting device with ID: \(id)")
         if let name = getDeviceName(deviceID: id) {
@@ -216,6 +216,22 @@ class AudioDeviceManager: ObservableObject {
                 self.selectedDeviceID = id
                 UserDefaults.standard.selectedAudioDeviceUID = uid
                 self.logger.info("Device selection saved with UID: \(uid)")
+                self.notifyDeviceChange()
+            }
+        } else {
+            logger.error("Attempted to select unavailable device: \(id)")
+            fallbackToDefaultDevice()
+        }
+    }
+
+    func selectDeviceAndSwitchToCustomMode(id: AudioDeviceID) {
+        if let deviceToSelect = availableDevices.first(where: { $0.id == id }) {
+            let uid = deviceToSelect.uid
+            DispatchQueue.main.async {
+                self.inputMode = .custom
+                self.selectedDeviceID = id
+                UserDefaults.standard.audioInputModeRawValue = AudioInputMode.custom.rawValue
+                UserDefaults.standard.selectedAudioDeviceUID = uid
                 self.notifyDeviceChange()
             }
         } else {
