@@ -5,6 +5,7 @@ import AppKit
 import OSLog
 import AppIntents
 import FluidAudio
+import Security
 
 @main
 struct VoiceInkApp: App {
@@ -150,16 +151,21 @@ struct VoiceInkApp: App {
 
             // Dictionary configuration
             let dictionarySchema = Schema([VocabularyWord.self, WordReplacement.self])
+            let cloudKitDatabase: ModelConfiguration.CloudKitDatabase
             #if LOCAL_BUILD
-            let dictionaryCloudKit: ModelConfiguration.CloudKitDatabase = .none
+            cloudKitDatabase = .none
             #else
-            let dictionaryCloudKit: ModelConfiguration.CloudKitDatabase = .private("iCloud.com.prakashjoshipax.VoiceInk")
+            if let containerID = availableCloudKitContainerIdentifier(logger: logger) {
+                cloudKitDatabase = .private(containerID)
+            } else {
+                cloudKitDatabase = .none
+            }
             #endif
             let dictionaryConfig = ModelConfiguration(
                 "dictionary",
                 schema: dictionarySchema,
                 url: dictionaryStoreURL,
-                cloudKitDatabase: dictionaryCloudKit
+                cloudKitDatabase: cloudKitDatabase
             )
 
             // Initialize container
@@ -171,6 +177,37 @@ struct VoiceInkApp: App {
             logger.error("Failed to create persistent ModelContainer: \(error.localizedDescription)")
             return nil
         }
+    }
+
+    private static func availableCloudKitContainerIdentifier(logger: Logger) -> String? {
+        guard let task = SecTaskCreateFromSelf(nil) else {
+            logger.warning("CloudKit disabled: unable to create security task.")
+            return nil
+        }
+
+        guard let rawEntitlement = SecTaskCopyValueForEntitlement(
+            task,
+            "com.apple.developer.icloud-container-identifiers" as CFString,
+            nil
+        ) else {
+            logger.notice("CloudKit entitlement not present; using local-only dictionary store.")
+            return nil
+        }
+
+        guard let containerIDs = rawEntitlement as? [String], !containerIDs.isEmpty else {
+            logger.notice("No iCloud container identifiers available; using local-only dictionary store.")
+            return nil
+        }
+
+        if let bundleID = Bundle.main.bundleIdentifier {
+            let preferred = "iCloud.\(bundleID)"
+            if containerIDs.contains(preferred) {
+                return preferred
+            }
+        }
+
+        logger.notice("Using fallback iCloud container identifier: \(containerIDs[0], privacy: .public)")
+        return containerIDs[0]
     }
     
     private static func createInMemoryContainer(schema: Schema, logger: Logger) -> ModelContainer? {
