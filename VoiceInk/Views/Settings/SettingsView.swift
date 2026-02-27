@@ -187,15 +187,6 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.segmented)
 
-                Toggle(isOn: Binding(
-                    get: { UserDefaults.standard.bool(forKey: "UseAppleScriptPaste") },
-                    set: { UserDefaults.standard.set($0, forKey: "UseAppleScriptPaste") }
-                )) {
-                    HStack(spacing: 4) {
-                        Text("AppleScript Paste")
-                        InfoTip("Paste via System Events instead of direct keystrokes. Try this if paste isn't working in some apps.")
-                    }
-                }
             }
 
             // MARK: - Experimental
@@ -240,6 +231,43 @@ struct SettingsView: View {
                 Text("Privacy")
             } footer: {
                 Text("Control how VoiceInk handles your transcription data and audio recordings.")
+            }
+
+            // MARK: - Backup
+            Section {
+                LabeledContent("Export Settings") {
+                    Button("Export") {
+                        ImportExportService.shared.exportSettings(
+                            enhancementService: enhancementService,
+                            whisperPrompt: WhisperPrompt(),
+                            hotkeyManager: hotkeyManager,
+                            menuBarManager: menuBarManager,
+                            mediaController: mediaController,
+                            playbackController: playbackController,
+                            soundManager: soundManager,
+                            whisperState: whisperState
+                        )
+                    }
+                }
+
+                LabeledContent("Import Settings") {
+                    Button("Import") {
+                        ImportExportService.shared.importSettings(
+                            enhancementService: enhancementService,
+                            whisperPrompt: WhisperPrompt(),
+                            hotkeyManager: hotkeyManager,
+                            menuBarManager: menuBarManager,
+                            mediaController: mediaController,
+                            playbackController: playbackController,
+                            soundManager: soundManager,
+                            whisperState: whisperState
+                        )
+                    }
+                }
+            } header: {
+                Text("Backup")
+            } footer: {
+                Text("Export or import all your settings, prompts, power modes, dictionary, and custom models.")
             }
 
             // MARK: - Diagnostics

@@ -21,7 +21,7 @@ class LicenseViewModel: ObservableObject {
     private let licenseManager = LicenseManager.shared
 
     init() {
-        // Skip license checks and always activate license on startup
+        // Keep licensing permanently enabled in this fork.
         licenseState = .licensed
     }
 
